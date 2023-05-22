@@ -1,5 +1,10 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
@@ -28,32 +33,3 @@ jobs:
         name: RobloxUltimateScraper (${{ matrix.configuration }}, ${{ matrix.platform }})
         path: |
           ./RobloxUltimateScraper/bin/${{ matrix.configuration }}/net6.0/${{ matrix.platform }}/publish/*
-          
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-
-    steps:
-      - name: Download Windows release artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: RobloxUltimateScraper (Release, win-x64)
-          path: Windows
-      - name: Download Linux release artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: RobloxUltimateScraper (Release, linux-x64)
-          path: Linux
-      - name: Rename binaries
-        run: |
-          mv Windows/RobloxUltimateScraper.exe RobloxUltimateScraper-${{ github.ref_name }}-Windows.exe
-          mv Linux/RobloxUltimateScraper RobloxUltimateScraper-${{ github.ref_name }}-Linux
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          draft: true
-          files: |
-            RobloxUltimateScraper-${{ github.ref_name }}-Windows.exe
-            RobloxUltimateScraper-${{ github.ref_name }}-Linux
-          name: RobloxUltimateScraper ${{ github.ref_name }}
