@@ -1,0 +1,35 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+        platform: [win-x64, linux-x64]
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+    - uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '6.x'
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore
+    - name: Publish
+      run: dotnet publish -p:PublishSingleFile=true -r ${{ matrix.platform }} -c ${{ matrix.configuration }} --self-contained false ./RobloxUltimateScraper/RobloxUltimateScraper.csproj
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: RobloxUltimateScraper (${{ matrix.configuration }}, ${{ matrix.platform }})
+        path: |
+          ./RobloxUltimateScraper/bin/${{ matrix.configuration }}/net6.0/${{ matrix.platform }}/publish/*
