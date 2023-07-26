@@ -23,12 +23,12 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Is index enabled
         /// </summary>
-        public static bool IndexEnabled { get { return Config.Default.OutputType == OutputType.IndexOnly || Config.Default.OutputType == OutputType.Both; } }
+        public static bool IndexEnabled { get { return Config.Default.OutputType == OutputType.Index || Config.Default.OutputType == OutputType.Both; } }
 
         /// <summary>
         /// Are files enabled
         /// </summary>
-        public static bool FilesEnabled { get { return Config.Default.OutputType == OutputType.FilesOnly || Config.Default.OutputType == OutputType.Both; } }
+        public static bool FilesEnabled { get { return Config.Default.OutputType == OutputType.Files || Config.Default.OutputType == OutputType.Both; } }
 
         /// <summary>
         /// Versions that successfully downloaded

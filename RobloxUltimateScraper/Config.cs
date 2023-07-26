@@ -15,17 +15,23 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Asset files
         /// </summary>
-        FilesOnly,
+        Files = 0,
+
+        [Obsolete]
+        FilesOnly = 0,
 
         /// <summary>
         /// Asset index
         /// </summary>
-        IndexOnly,
+        Index = 1,
+
+        [Obsolete]
+        IndexOnly = 1,
 
         /// <summary>
         /// Asset files and index
         /// </summary>
-        Both
+        Both = 2
     }
 
     /// <summary>
