@@ -380,7 +380,7 @@ namespace RobloxUltimateScraper
 
                     if (cdnResponse.StatusCode == HttpStatusCode.Forbidden)
                     {
-                        LogAsset(error: $"Failed to fetch {asset.Hash} v{asset.Version} ({cdnUrl}): Asset not found on CDN", id: asset.Id, version: asset.Version);
+                        LogAsset(error: $"Failed to fetch {asset.Id} v{asset.Version} ({cdnUrl}): Asset not found on CDN", id: asset.Id, version: asset.Version);
                         FireAssetFailed();
                         continue;
                     }
