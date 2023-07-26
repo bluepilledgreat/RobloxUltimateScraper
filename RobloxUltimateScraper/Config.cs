@@ -228,8 +228,8 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Assets output directory.
         /// </summary>
-        [Option('d', "directory", Required = false, Default = "output", HelpText = "Assets output directory.")]
-        public string OutputDirectory { get; set; } = "output";
+        [Option('d', "directory", Required = false, HelpText = "Assets output directory.")]
+        public string OutputDirectory { get; set; } = ""
 
         /// <summary>
         /// Assets output extension.

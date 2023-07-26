@@ -91,6 +91,9 @@ namespace RobloxUltimateScraper
         {
             long assetId = Config.Default.ScraperId;
 
+            if (string.IsNullOrEmpty(Config.Default.OutputDirectory))
+                Config.Default.OutputDirectory = $"Asset_{assetId}";
+
             // get all place versions
             (bool versionsSuccess, string versionsMessage, int versions) = await Scraper.GetTotalAssetVersions(assetId);
 
