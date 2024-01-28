@@ -361,7 +361,11 @@ namespace RobloxUltimateScraper
             {
                 AssetInput asset;
                 lock (Assets)
+                {
+                    if (Assets.Count == 0)
+                        continue;
                     asset = Assets.Dequeue();
+                }
 
                 if (asset.Id != 0)
                 {
