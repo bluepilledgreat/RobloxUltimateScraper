@@ -31,6 +31,11 @@ namespace RobloxUltimateScraper
         public static bool FilesEnabled { get { return Config.Default.OutputType == OutputType.Files || Config.Default.OutputType == OutputType.Both; } }
 
         /// <summary>
+        /// Is console only
+        /// </summary>
+        public static bool ConsoleOnly { get { return Config.Default.OutputType == OutputType.Console; } }
+
+        /// <summary>
         /// Versions that successfully downloaded
         /// </summary>
         public static int SuccessfulDownloads { get; private set; }
@@ -299,7 +304,8 @@ namespace RobloxUltimateScraper
                 return;
             }
 
-            Directory.CreateDirectory(Config.Default.OutputDirectory);
+            if (!ConsoleOnly)
+                Directory.CreateDirectory(Config.Default.OutputDirectory);
 
             // get last modified
             string? lastModified = response.Content.Headers.GetValues("last-modified").FirstOrDefault();

@@ -29,9 +29,14 @@ namespace RobloxUltimateScraper
         IndexOnly = 1,
 
         /// <summary>
+        /// Console output
+        /// </summary>
+        Console = 2,
+
+        /// <summary>
         /// Asset files and index
         /// </summary>
-        Both = 2
+        Both = 3
     }
 
     /// <summary>

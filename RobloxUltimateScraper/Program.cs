@@ -91,7 +91,7 @@ namespace RobloxUltimateScraper
         {
             long assetId = Config.Default.ScraperId;
 
-            if (string.IsNullOrEmpty(Config.Default.OutputDirectory))
+            if (string.IsNullOrEmpty(Config.Default.OutputDirectory) && !Scraper.ConsoleOnly)
                 Config.Default.OutputDirectory = $"Asset_{assetId}";
 
             // get all place versions
