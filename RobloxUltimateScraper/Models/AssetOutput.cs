@@ -105,12 +105,6 @@ namespace RobloxUltimateScraper.Models
             if (Version > other.Version) return 1;
             if (Version < other.Version) return -1;
 
-            // unhandled case!
-            Console.WriteLine("[ASSERT] Unhandled comparison case!");
-            Console.WriteLine($"[ASSERT] {ToString()}");
-            Console.WriteLine($"[ASSERT] {other}");
-            Debug.Assert(false);
-
             return 0;
         }
     }
