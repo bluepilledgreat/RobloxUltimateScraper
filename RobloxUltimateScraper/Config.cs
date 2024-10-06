@@ -266,5 +266,33 @@ namespace RobloxUltimateScraper
         /// </summary>
         [Option('t', "timeout", Required = false, Default = 180, HelpText = "Http timeout in seconds.")]
         public int HttpTimeout { get; set; } = 180;
+
+        private string _baseUrl = "roblox.com";
+
+        /// <summary>
+        /// Roblox environment to download from.
+        /// </summary>
+        [Option("baseurl", Required = false, Default = "www.roblox.com", HelpText = "Roblox environment to download from.")]
+        public string BaseUrl
+        {
+            get => _baseUrl;
+
+            set
+            {
+                if (value.StartsWith("http://"))
+                    value = value[7..];
+                else if (value.StartsWith("https://"))
+                    value = value[8..];
+
+                if (value.StartsWith("www.") || value.StartsWith("web."))
+                    value = value[4..];
+
+                int idx = value.IndexOf('/');
+                if (idx != -1)
+                    value = value[..idx];
+
+                _baseUrl = value;
+            }
+        }
     }
 }

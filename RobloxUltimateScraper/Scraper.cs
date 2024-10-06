@@ -83,7 +83,7 @@ namespace RobloxUltimateScraper
             _CookieContainer = new CookieContainer();
 
             if (!string.IsNullOrEmpty(Config.Default.AuthCookie))
-                _CookieContainer.Add(new Cookie(".ROBLOSECURITY", Config.Default.AuthCookie, "/", ".roblox.com"));
+                _CookieContainer.Add(new Cookie(".ROBLOSECURITY", Config.Default.AuthCookie, "/", $".{Config.Default.BaseUrl}"));
 
             HttpClientHandler httpClientHandler = new HttpClientHandler
             {
@@ -110,7 +110,7 @@ namespace RobloxUltimateScraper
         /// <returns>Http response</returns>
         public static Task<HttpResponseMessage> AssetRequest(long id, int version = 0)
         {
-            string url = $"https://assetdelivery.roblox.com/v1/asset/?id={id}&version={version}";
+            string url = $"https://assetdelivery.{Config.Default.BaseUrl}/v1/asset/?id={id}&version={version}";
             return _HttpClient.GetAsync(url);
         }
 
@@ -192,7 +192,7 @@ namespace RobloxUltimateScraper
         /// <returns>Http response</returns>
         public static Task<HttpResponseMessage> CDNUrlRequest(string hash)
         {
-            return _HttpClient.GetAsync($"https://contentstore.roblox.com/v1/content?hash={hash}");
+            return _HttpClient.GetAsync($"https://contentstore.{Config.Default.BaseUrl}/v1/content?hash={hash}");
         }
 
         /// <summary>
