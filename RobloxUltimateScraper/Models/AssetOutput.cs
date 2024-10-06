@@ -15,12 +15,12 @@ namespace RobloxUltimateScraper.Models
         /// <summary>
         /// Asset version
         /// </summary>
-        public long? Id { get; set; }
+        public long Id { get; set; }
         
         /// <summary>
         /// Asset version
         /// </summary>
-        public int? Version { get; set; }
+        public int Version { get; set; }
 
         /// <summary>
         /// CDN url
@@ -51,15 +51,7 @@ namespace RobloxUltimateScraper.Models
         // 1818 | v1 | Error: failed to download
         public override string ToString()
         {
-            string output = "";
-
-            if (Id != null)
-                output += $"{Id} | v{Version}";
-            else
-            {
-                Debug.Assert(false);
-                return "OUTPUT ERROR: NO ID OR HASH!";
-            }
+            string output = $"{Id} | v{Version}";
 
             if (Error != null)
             {
@@ -82,10 +74,6 @@ namespace RobloxUltimateScraper.Models
         public int CompareTo(AssetOutput? other)
         {
             if (other == null) return 1;
-
-            // asset id has priority over hashes
-            if (other.Id == null && Id != null) return 1;
-            if (other.Id != null && Id == null) return -1;
 
             // compare asset ids
             if (Id > other.Id) return 1;
