@@ -10,6 +10,5 @@ namespace RobloxUltimateScraper.Models
     {
         public long Id { get; set; }
         public int Version { get; set; }
-        public string? Hash { get; set; }
     }
 }

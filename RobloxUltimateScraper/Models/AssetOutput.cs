@@ -16,11 +16,6 @@ namespace RobloxUltimateScraper.Models
         /// Asset version
         /// </summary>
         public long? Id { get; set; }
-
-        /// <summary>
-        /// Asset hash
-        /// </summary>
-        public string? Hash { get; set; }
         
         /// <summary>
         /// Asset version
@@ -60,8 +55,6 @@ namespace RobloxUltimateScraper.Models
 
             if (Id != null)
                 output += $"{Id} | v{Version}";
-            else if (Hash != null)
-                output += Hash;
             else
             {
                 Debug.Assert(false);
@@ -89,9 +82,6 @@ namespace RobloxUltimateScraper.Models
         public int CompareTo(AssetOutput? other)
         {
             if (other == null) return 1;
-
-            // compare hashes if both are hashes
-            if (Hash != null && other.Hash != null) return Hash.CompareTo(other.Hash);
 
             // asset id has priority over hashes
             if (other.Id == null && Id != null) return 1;
