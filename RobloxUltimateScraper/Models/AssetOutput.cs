@@ -16,11 +16,6 @@ namespace RobloxUltimateScraper.Models
         /// Asset version
         /// </summary>
         public long? Id { get; set; }
-
-        /// <summary>
-        /// Asset hash
-        /// </summary>
-        public string? Hash { get; set; }
         
         /// <summary>
         /// Asset version
@@ -60,8 +55,6 @@ namespace RobloxUltimateScraper.Models
 
             if (Id != null)
                 output += $"{Id} | v{Version}";
-            else if (Hash != null)
-                output += Hash;
             else
             {
                 Debug.Assert(false);

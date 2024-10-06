@@ -186,89 +186,39 @@ namespace RobloxUltimateScraper
         }
 
         /// <summary>
-        /// Creates a request to https://contentstore.roblox.com/v1/content
-        /// </summary>
-        /// <param name="hash">Asset hash</param>
-        /// <returns>Http response</returns>
-        public static Task<HttpResponseMessage> CDNUrlRequest(string hash)
-        {
-            return _HttpClient.GetAsync($"https://contentstore.{Config.Default.BaseUrl}/v1/content?hash={hash}");
-        }
-
-        /// <summary>
-        /// Retrieves the CDN url from an asset hash
-        /// </summary>
-        /// <param name="hash">Asset hash</param>
-        /// <returns>Success, Error string, CDN url</returns>
-        public static async Task<(bool, string, string)> GetCDNUrl(string hash)
-        {
-            HttpResponseMessage response = await CDNUrlRequest(hash);
-
-            if (!IsSuccessStatusCode(response.StatusCode))
-                return (false, $"Unsuccessful status code, hash likely not found on CDN ({(int)response.StatusCode})", "");
-
-            if (!response.Headers.TryGetValues("Location", out IEnumerable<string>? values))
-                return (false, "Location header is missing", ""); // this should never happen, but handle anyways
-
-            string location = values.First();
-
-            return (true, "Success", location);
-        }
-
-        /// <summary>
         /// Constructs the asset output path
         /// </summary>
         /// <param name="id">Id</param>
         /// <param name="version">Version</param>
-        /// <param name="hash">Hash</param>
         /// <returns>Asset output path</returns>
-        /// <exception cref="Exception">Id and Hash are undefined</exception>
-        public static string BuildAssetOutputFileName(long? id = null, int? version = null, string? hash = null)
+        public static string BuildAssetOutputFileName(long id, int version)
         {
-            if (id != null && version != null)
-                return $"{id}-v{version}";
-            
-            if (id != null)
-                return id.ToString()!;
-            
-            if (hash != null)
-                return hash;
+            string fileName = id.ToString();
+            if (version != 0)
+                fileName += $"-v{version}";
 
-            Debug.Assert(false);
-            throw new Exception("Failed to build asset output path");
+            return fileName;
         }
 
         /// <summary>
         /// Logs an asset to index
         /// </summary>
         /// <param name="id">Id</param>
-        /// <param name="hash">Hash</param>
         /// <param name="version">Version</param>
         /// <param name="cdnUrl">CDN url</param>
         /// <param name="fileSizeInMb">File size in Mb</param>
         /// <param name="lastModified">Last modified</param>
         /// <param name="error">Error message</param>
-        private static void LogAsset(long? id = null,
-            string? hash = null,
-            int? version = null,
+        private static void LogAsset(long id,
+            int version,
             string? cdnUrl = null,
             double? fileSizeInMb = null,
             string? lastModified = null,
             string? error = null)
         {
-            if (
-                (id == null && hash == null) ||
-                (id != null && hash != null)
-               )
-            {
-                Debug.Assert(false);
-                return;
-            }
-
             AssetOutput output = new AssetOutput
             {
                 Id = id,
-                Hash = hash,
                 Version = version,
                 CDNUrl = cdnUrl,
                 FileSizeInMb = fileSizeInMb,
@@ -286,24 +236,13 @@ namespace RobloxUltimateScraper
         /// </summary>
         /// <param name="response">Http response messsage</param>
         /// <param name="id">Id</param>
-        /// <param name="hash">Hash</param>
         /// <param name="version">Version</param>
         /// <param name="cdnUrl">CDN url</param>
         private static async Task LogAssetFromCDNHttpMessageResponse(HttpResponseMessage response,
-            long? id = null,
-            string? hash = null,
-            int? version = null,
-            string? cdnUrl = null)
+            long id,
+            int version,
+            string cdnUrl)
         {
-            if (
-                (id == null && hash == null) ||
-                (id != null && hash != null)
-               )
-            {
-                Debug.Assert(false);
-                return;
-            }
-
             if (!ConsoleOnly)
                 Directory.CreateDirectory(Config.Default.OutputDirectory);
 
@@ -318,7 +257,7 @@ namespace RobloxUltimateScraper
 
                 if (FilesEnabled)
                 {
-                    string outputName = BuildAssetOutputFileName(id: id, version: version, hash: hash);
+                    string outputName = BuildAssetOutputFileName(id, version);
                     string path = Path.Combine(Config.Default.OutputDirectory, outputName);
                     string outputPath = FileWriter.BuildOutputFileName(path);
 
@@ -330,7 +269,6 @@ namespace RobloxUltimateScraper
 
             LogAsset(
                 id: id,
-                hash: hash,
                 version: version,
                 cdnUrl: cdnUrl,
                 fileSizeInMb: fileSize,
@@ -373,84 +311,36 @@ namespace RobloxUltimateScraper
                     asset = Assets.Dequeue();
                 }
 
-                if (asset.Id != 0)
+                // get the url
+                (bool cdnGetSuccess, string cdnGetMessage, string cdnUrl) = await GetCDNUrl(asset.Id, asset.Version);
+
+                if (!cdnGetSuccess)
                 {
-                    // get the url
-                    (bool cdnGetSuccess, string cdnGetMessage, string cdnUrl) = await GetCDNUrl(asset.Id, asset.Version);
-
-                    if (!cdnGetSuccess)
-                    {
-                        LogAsset(error: $"Failed to fetch {asset.Id} v{asset.Version}: {cdnGetMessage}", id: asset.Id, version: asset.Version);
-                        FireAssetFailed();
-                        continue;
-                    }
-
-                    // download the asset
-                    HttpResponseMessage cdnResponse = await _HttpClient.GetAsync(cdnUrl);
-
-                    if (cdnResponse.StatusCode == HttpStatusCode.Forbidden)
-                    {
-                        LogAsset(error: $"Failed to fetch {asset.Id} v{asset.Version} ({cdnUrl}): Asset not found on CDN", id: asset.Id, version: asset.Version);
-                        FireAssetFailed();
-                        continue;
-                    }
-
-                    if (!IsSuccessStatusCode(cdnResponse.StatusCode))
-                    {
-                        LogAsset(error: $"Failed to fetch {asset.Id} v{asset.Version} ({cdnUrl}): Unknown status code ({(int)cdnResponse.StatusCode})", id: asset.Id, version: asset.Version);
-                        FireAssetFailed();
-                        continue;
-                    }
-
-                    // save!
-                    await LogAssetFromCDNHttpMessageResponse(cdnResponse, id: asset.Id, version: asset.Version, cdnUrl: cdnUrl);
-                    FireAssetSuccess();
+                    LogAsset(error: $"Failed to fetch {asset.Id} v{asset.Version}: {cdnGetMessage}", id: asset.Id, version: asset.Version);
+                    FireAssetFailed();
+                    continue;
                 }
-                else if (!string.IsNullOrEmpty(asset.Hash))
+
+                // download the asset
+                HttpResponseMessage cdnResponse = await _HttpClient.GetAsync(cdnUrl);
+
+                if (cdnResponse.StatusCode == HttpStatusCode.Forbidden)
                 {
-                    string hash = asset.Hash.ToLowerInvariant();
-                    string url;
-
-                    // retrieve full url if not cdn url
-                    if (hash[..4] != "http")
-                    {
-                        (bool success, string message, url) = await GetCDNUrl(hash);
-
-                        if (!success)
-                        {
-                            LogAsset(error: $"Failed to fetch {asset.Hash} url: {message}", hash: hash);
-                            FireAssetFailed();
-                            continue;
-                        }
-                    }
-                    else // update the cdn url
-                    {
-                        url = hash;
-                        url = url.Replace("http:", "https:");
-                        url = url.Replace(".roblox.com", ".rbxcdn.com");
-                    }
-
-                    // download the asset
-                    HttpResponseMessage cdnResponse = await _HttpClient.GetAsync(url);
-
-                    if (cdnResponse.StatusCode == HttpStatusCode.Forbidden)
-                    {
-                        LogAsset(error: $"Failed to fetch {asset.Hash} ({url}): Asset not found on CDN", hash: hash);
-                        FireAssetFailed();
-                        continue;
-                    }
-
-                    if (!IsSuccessStatusCode(cdnResponse.StatusCode))
-                    {
-                        LogAsset(error: $"Failed to fetch {asset.Hash} ({url}): Unknown status code ({(int)cdnResponse.StatusCode})", hash: hash);
-                        FireAssetFailed();
-                        continue;
-                    }
-
-                    // save!
-                    await LogAssetFromCDNHttpMessageResponse(cdnResponse, hash: hash, cdnUrl: url);
-                    FireAssetSuccess();
+                    LogAsset(error: $"Failed to fetch {asset.Id} v{asset.Version} ({cdnUrl}): Asset not found on CDN", id: asset.Id, version: asset.Version);
+                    FireAssetFailed();
+                    continue;
                 }
+
+                if (!IsSuccessStatusCode(cdnResponse.StatusCode))
+                {
+                    LogAsset(error: $"Failed to fetch {asset.Id} v{asset.Version} ({cdnUrl}): Unknown status code ({(int)cdnResponse.StatusCode})", id: asset.Id, version: asset.Version);
+                    FireAssetFailed();
+                    continue;
+                }
+
+                // save!
+                await LogAssetFromCDNHttpMessageResponse(cdnResponse, asset.Id, asset.Version, cdnUrl);
+                FireAssetSuccess();
             }
         }
 
