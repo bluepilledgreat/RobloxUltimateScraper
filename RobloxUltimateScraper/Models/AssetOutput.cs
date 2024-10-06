@@ -83,9 +83,6 @@ namespace RobloxUltimateScraper.Models
         {
             if (other == null) return 1;
 
-            // compare hashes if both are hashes
-            if (Hash != null && other.Hash != null) return Hash.CompareTo(other.Hash);
-
             // asset id has priority over hashes
             if (other.Id == null && Id != null) return 1;
             if (other.Id != null && Id == null) return -1;
