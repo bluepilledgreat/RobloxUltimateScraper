@@ -1,22 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace RobloxUltimateScraper.Models
+﻿namespace RobloxUltimateScraper.Models
 {
     /// <summary>
     /// Asset information for index
     /// </summary>
     internal class AssetOutput : IComparable<AssetOutput>
     {
-        /// <summary>
-        /// Asset version
-        /// </summary>
-        public long Id { get; set; }
-        
         /// <summary>
         /// Asset version
         /// </summary>
@@ -67,7 +55,7 @@ namespace RobloxUltimateScraper.Models
         // 1818 | v1 | Error: failed to download
         public string ToString(bool trimCdnUrl)
         {
-            string output = $"{Id} | v{Version}";
+            string output = $"v{Version}";
 
             if (Error != null)
             {
@@ -95,10 +83,6 @@ namespace RobloxUltimateScraper.Models
         public int CompareTo(AssetOutput? other)
         {
             if (other == null) return 1;
-
-            // compare asset ids
-            if (Id > other.Id) return 1;
-            if (Id < other.Id) return -1;
 
             // compare versions
             if (Version > other.Version) return 1;

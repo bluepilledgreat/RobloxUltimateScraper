@@ -1,7 +1,6 @@
 ﻿using CommandLine;
 using CommandLine.Text;
 using RobloxUltimateScraper.Enums;
-using RobloxUltimateScraper.Models;
 using System.Reflection;
 
 namespace RobloxUltimateScraper
@@ -14,9 +13,9 @@ namespace RobloxUltimateScraper
                 args = new string[] { "--help" };
 
             Parser cmdLineParser = new Parser(settings => settings.CaseInsensitiveEnumValues = true);
-            ParserResult<Config> configParser = cmdLineParser.ParseArguments<Config>(args);
+            ParserResult<CommandLineConfig> configParser = cmdLineParser.ParseArguments<CommandLineConfig>(args);
             configParser.WithNotParsed(errors => Error(configParser, errors));
-            await configParser.WithParsedAsync(async config => await Run(config));
+            configParser.WithParsed(config => Run(config));
         }
 
         /// <summary>
@@ -24,11 +23,11 @@ namespace RobloxUltimateScraper
         /// </summary>
         /// <param name="config">Configuration</param>
         /// <returns></returns>
-        static async Task Run(Config config)
+        static void Run(CommandLineConfig config)
         {
             Console.WriteLine($"RobloxUltimateScraper v{Assembly.GetExecutingAssembly().GetName().Version}");
 
-            Config.Default = config;
+            Config.Initialise(config);
 
             // TODO: add functionality for
             //       list
@@ -36,13 +35,13 @@ namespace RobloxUltimateScraper
             //       range
             switch (Config.Default.Scraper)
             {
-                case null:
-                    Console.WriteLine("Please define which scraper you wish to use!");
+                case ScraperType.None:
+                    Console.WriteLine("No scraper chosen.");
                     Console.WriteLine("Run the scraper with the --help argument for all commands.");
                     break;
 
                 case ScraperType.Asset:
-                    await RunAssetScraper();
+                    RunAssetScraper();
                     break;
 
                 case ScraperType.List:
@@ -67,7 +66,7 @@ namespace RobloxUltimateScraper
         /// Handles command line parsing failure
         /// </summary>
         /// <param name="errors">Errors from command line parser</param>
-        static void Error(ParserResult<Config> config, IEnumerable<Error> errors)
+        static void Error(ParserResult<CommandLineConfig> config, IEnumerable<Error> errors)
         {
             HelpText text = HelpText.AutoBuild(config);
             Console.WriteLine(text);
@@ -82,63 +81,46 @@ namespace RobloxUltimateScraper
         /// <param name="downloaded">Downloads</param>
         /// <param name="errors">Errors</param>
         /// <param name="total">Versions</param>
-        static void SetAssetScraperTitle(long id, int downloaded, int errors, int total)
+        static void SetAssetScraperTitle(ulong id, int downloaded, int errors, int total)
         {
-            Console.Title = $"{nameof(RobloxUltimateScraper)} | Asset {id} | {downloaded}/{total} | {errors} Errors";
+            Console.Title = $"RobloxUltimateScraper | Asset {id} | {downloaded}/{total} | {errors} Errors";
         }
 
         /// <summary>
         /// Starts the asset scraper
         /// </summary>
         /// <returns></returns>
-        static async Task RunAssetScraper()
+        static void RunAssetScraper()
         {
-            long assetId = Config.Default.ScraperId;
+            ulong assetId = Config.Default.ScraperAssetId;
 
-            if (string.IsNullOrEmpty(Config.Default.OutputDirectory) && !Scraper.ConsoleOnly)
-                Config.Default.OutputDirectory = $"Asset_{assetId}";
+            string outputDirectory;
 
-            Scraper.ShouldTrimCdnUrlInConsole = Config.Default.TrimCdnUrlInConsole ?? !Scraper.ConsoleOnly;
+            if (string.IsNullOrEmpty(Config.Default.OutputDirectory) && Config.Default.OutputType != OutputType.Console)
+                outputDirectory = $"Asset_{assetId}";
+            else
+                outputDirectory = Config.Default.OutputDirectory;
 
-            // get all place versions
-            var assetDeliveryInfo = await Scraper.GetAssetDeliveryInformation(assetId);
+            Scraper scraper = new Scraper(assetId, outputDirectory);
+            scraper.Setup().Wait();
 
-            if (!assetDeliveryInfo.Success)
-            {
-                Console.WriteLine($"Failed to fetch versions for asset {assetId}: {assetDeliveryInfo.Error}");
-                Environment.Exit(1);
-            }
-
-            Console.WriteLine($"Asset {assetId} has {assetDeliveryInfo.TotalVersions} versions!");
-
-            Scraper.FileExtension = Config.Default.OutputExtension == "Auto" ? assetDeliveryInfo.AssetType.GetExtension() : Config.Default.OutputExtension;
-            Scraper.CompressionLevel = Config.Default.CompressionLevel; // BZip2 and Zstd libraries automatically clamp the compression level
-
-            // add to queue
-            for (int i = 1; i <= assetDeliveryInfo.TotalVersions; i++)
-            {
-                Scraper.Assets.Enqueue(new AssetInput
-                {
-                    Id = assetId,
-                    Version = i
-                });
-            }
+            Console.WriteLine($"Asset {assetId} has {scraper.TotalVersions} versions!");
 
             // set up titles
-            SetAssetScraperTitle(assetId, 0, 0, assetDeliveryInfo.TotalVersions);
-            Scraper.OnDownloadFinished += () => SetAssetScraperTitle(assetId, Scraper.SuccessfulDownloads, Scraper.FailedDownloads, assetDeliveryInfo.TotalVersions);
+            SetAssetScraperTitle(assetId, 0, 0, scraper.TotalVersions);
+            scraper.OnDownloadFinished += () => SetAssetScraperTitle(assetId, scraper.SuccessfulDownloads, scraper.FailedDownloads, scraper.TotalVersions);
 
             // start workers
             List<Task> workers = new List<Task>();
 
             for (int i = 1; i <= Config.Default.Workers; i++)
-                workers.Add(Task.Run(Scraper.StartWorker));
+                workers.Add(Task.Run(scraper.StartWorker));
 
             Task.WaitAll(workers.ToArray());
 
             // finalise
-            Scraper.PrintDownloadStatistics();
-            Scraper.WriteIndexFile($"{assetId} asset versions on {DateTime.Now.ToString("R")} ({assetDeliveryInfo.TotalVersions} versions)");
+            scraper.PrintDownloadStatistics();
+            scraper.WriteIndexFile($"{assetId} asset versions on {DateTime.Now.ToString("R")} ({scraper.TotalVersions} versions)");
         }
     }
 }
