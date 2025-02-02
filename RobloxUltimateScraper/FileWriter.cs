@@ -34,13 +34,11 @@ namespace RobloxUltimateScraper
                 switch (Config.Default.CompressionType)
                 {
                     case CompressionType.GZip:
-                        using (Ionic.Zlib.GZipStream compressor = new Ionic.Zlib.GZipStream(ms, Ionic.Zlib.CompressionMode.Compress, true))
-                            stream.CopyTo(compressor);
+                        ICSharpCode.SharpZipLib.GZip.GZip.Compress(stream, ms, false);
                         filePath += ".gz";
                         break;
                     case CompressionType.BZip2:
-                        using (Ionic.BZip2.BZip2OutputStream compressor = new Ionic.BZip2.BZip2OutputStream(ms, true))
-                            stream.CopyTo(compressor);
+                        ICSharpCode.SharpZipLib.BZip2.BZip2.Compress(stream, ms, false, 9);
                         filePath += ".bz2";
                         break;
                     default:
