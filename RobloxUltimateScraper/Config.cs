@@ -250,7 +250,7 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Asset compression level.
         /// </summary>
-        public int CompressionLevel { get => CompressionLevelArgOtherName != null ? (int)CompressionLevelArgOtherName : CompressionLevel; }
+        public int CompressionLevel { get => CompressionLevelArgOtherName != null ? (int)CompressionLevelArgOtherName : CompressionLevelArg; }
 
         /// <summary>
         /// Assets output directory.
