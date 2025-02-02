@@ -2,6 +2,7 @@
 using CommandLine.Text;
 using RobloxUltimateScraper.Enums;
 using RobloxUltimateScraper.Models;
+using System.Reflection;
 
 namespace RobloxUltimateScraper
 {
@@ -25,6 +26,8 @@ namespace RobloxUltimateScraper
         /// <returns></returns>
         static async Task Run(Config config)
         {
+            Console.WriteLine($"RobloxUltimateScraper v{Assembly.GetExecutingAssembly().GetName().Version}");
+
             Config.Default = config;
 
             // TODO: add functionality for
