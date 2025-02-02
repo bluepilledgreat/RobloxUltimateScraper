@@ -213,7 +213,10 @@ namespace RobloxUltimateScraper
                 string versionsStr = values.First();
 
                 if (!Enum.TryParse(versionsStr, out assetType))
-                    return new AssetDeliveryInformation { Success = false, Error = "Asset type ID header is invalid" }; // this should ALSO never happen, but handle anyways
+                {
+                    Debug.Assert(false);
+                    assetType = AssetType.Product;
+                }
             }
 
             return new AssetDeliveryInformation { Success = true, TotalVersions = versions, AssetType = assetType };

@@ -88,6 +88,7 @@
     {
         private static readonly Dictionary<AssetType, string?> _extensionMap = new Dictionary<AssetType, string?>()
         {
+            [AssetType.Product] = null,
             [AssetType.Image] = "png", // TODO: auto detect what type of image it is
             [AssetType.TShirt] = "rbxm",
             [AssetType.Audio] = "ogg",
