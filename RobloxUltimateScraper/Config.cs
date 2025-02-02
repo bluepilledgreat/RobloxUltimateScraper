@@ -236,8 +236,21 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Asset compression type.
         /// </summary>
-        [Option('c', "compression", Required = false, Default = CompressionType.None, HelpText = "Asset compression type.")]
+        [Option('c', "compression", Required = false, Default = CompressionType.None, HelpText = "Compression type.")]
         public CompressionType CompressionType { get; set; } = CompressionType.None;
+
+        [Option("compressionlevel", Required = false, Default = 9, HelpText = "Compression level for the compression. Only works for BZip2 (1-9) and Zstd (1-22). Other name: --cl.")]
+        public int CompressionLevelArg { get; set; } = 9; // 9 is good for both BZip2 and Zstd
+
+        // this sucks but commandlineparser has no way to set multiple names for an argument
+        // and short arguments are only allowed to be a single character
+        [Option("cl", Required = false, Hidden = true)]
+        public int? CompressionLevelArgOtherName { get; set; }
+
+        /// <summary>
+        /// Asset compression level.
+        /// </summary>
+        public int CompressionLevel { get => CompressionLevelArgOtherName != null ? (int)CompressionLevelArgOtherName : CompressionLevel; }
 
         /// <summary>
         /// Assets output directory.

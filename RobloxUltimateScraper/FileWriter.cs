@@ -28,7 +28,7 @@ namespace RobloxUltimateScraper
         /// <param name="filePath">File path</param>
         /// <param name="stream">Stream</param>
         /// <param name="lastModified">Last modified</param>
-        public static void Save(string filePath, Stream stream, DateTime? lastModified = null)
+        public static void Save(string filePath, Stream stream, int compressionLevel, DateTime? lastModified = null)
         {
             using (MemoryStream ms = new MemoryStream())
             {
@@ -39,11 +39,11 @@ namespace RobloxUltimateScraper
                         filePath += ".gz";
                         break;
                     case CompressionType.BZip2:
-                        ICSharpCode.SharpZipLib.BZip2.BZip2.Compress(stream, ms, false, 9);
+                        ICSharpCode.SharpZipLib.BZip2.BZip2.Compress(stream, ms, false, compressionLevel);
                         filePath += ".bz2";
                         break;
                     case CompressionType.Zstd:
-                        using (var compressor = new ZstdSharp.CompressionStream(ms, 9))
+                        using (var compressor = new ZstdSharp.CompressionStream(ms, compressionLevel))
                             stream.CopyTo(compressor);
                         filePath += ".zst";
                         break;

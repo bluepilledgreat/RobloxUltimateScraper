@@ -32,6 +32,11 @@ namespace RobloxUltimateScraper
         public static bool ShouldTrimCdnUrlInConsole { get; set; } = true;
 
         /// <summary>
+        /// Compression level
+        /// </summary>
+        public static int CompressionLevel { get; set; } = 0;
+
+        /// <summary>
         /// Is index enabled
         /// </summary>
         public static bool IndexEnabled { get { return Config.Default.OutputType == OutputType.Index || Config.Default.OutputType == OutputType.Both; } }
@@ -316,7 +321,7 @@ namespace RobloxUltimateScraper
 
                     DateTime? lastModifiedDT = lastModified != null ? DateTime.Parse(lastModified) : null;
 
-                    FileWriter.Save(outputPath, stream, lastModifiedDT);
+                    FileWriter.Save(outputPath, stream, CompressionLevel, lastModifiedDT);
                 }
             }
 

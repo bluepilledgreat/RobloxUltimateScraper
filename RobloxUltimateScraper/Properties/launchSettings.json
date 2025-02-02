@@ -5,7 +5,7 @@
     },
     "RobloxUltimateScraper - Asset Scraper": {
       "commandName": "Project",
-      "commandLineArgs": "-w 30\r\n-c Zstd\r\n-d Crossroads\r\n-o Both\r\n-a 1818\r\n-i All"
+      "commandLineArgs": "-w 30\r\n-c Zstd\r\n--cl 15\r\n-d Crossroads\r\n-o Both\r\n-a 1818\r\n-i All"
     }
   }
 }

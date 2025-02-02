@@ -109,6 +109,7 @@ namespace RobloxUltimateScraper
             Console.WriteLine($"Asset {assetId} has {assetDeliveryInfo.TotalVersions} versions!");
 
             Scraper.FileExtension = Config.Default.OutputExtension == "Auto" ? assetDeliveryInfo.AssetType.GetExtension() : Config.Default.OutputExtension;
+            Scraper.CompressionLevel = Config.Default.CompressionLevel; // BZip2 and Zstd libraries automatically clamp the compression level
 
             // add to queue
             for (int i = 1; i <= assetDeliveryInfo.TotalVersions; i++)
