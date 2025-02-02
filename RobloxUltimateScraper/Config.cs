@@ -224,19 +224,19 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Assets output type.
         /// </summary>
-        [Option('o', "output", Required = false, Default = OutputType.Both, HelpText = "Assets output type.")]
+        [Option('o', "output", Required = false, Default = OutputType.Both, HelpText = "Assets output type. (Files, Index, Console, Both)")]
         public OutputType OutputType { get; set; } = OutputType.Both;
 
         /// <summary>
         /// Index type.
         /// </summary>
-        [Option('i', "index", Required = false, Default = IndexType.All, HelpText = "Index type.")]
+        [Option('i', "index", Required = false, Default = IndexType.All, HelpText = "Index type. (Text, Json, All)")]
         public IndexType IndexType { get; set; } = IndexType.All;
 
         /// <summary>
         /// Asset compression type.
         /// </summary>
-        [Option('c', "compression", Required = false, Default = CompressionType.None, HelpText = "Compression type.")]
+        [Option('c', "compression", Required = false, Default = CompressionType.None, HelpText = "Compression type. (None, GZip, Bzip2, Zstd)")]
         public CompressionType CompressionType { get; set; } = CompressionType.None;
 
         [Option("compressionlevel", Required = false, Default = 9, HelpText = "Compression level for the compression. Only works for BZip2 (1-9) and Zstd (1-22). Other name: --cl.")]
