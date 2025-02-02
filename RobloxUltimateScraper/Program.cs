@@ -95,6 +95,8 @@ namespace RobloxUltimateScraper
             if (string.IsNullOrEmpty(Config.Default.OutputDirectory) && !Scraper.ConsoleOnly)
                 Config.Default.OutputDirectory = $"Asset_{assetId}";
 
+            Scraper.ShouldTrimCdnUrlInConsole = Config.Default.TrimCdnUrlInConsole ?? !Scraper.ConsoleOnly;
+
             // get all place versions
             var assetDeliveryInfo = await Scraper.GetAssetDeliveryInformation(assetId);
 

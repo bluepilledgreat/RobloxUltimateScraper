@@ -27,6 +27,11 @@ namespace RobloxUltimateScraper
         public static string? FileExtension { get; set; } = null;
 
         /// <summary>
+        /// Should the CDN url be trimmed in the console output
+        /// </summary>
+        public static bool ShouldTrimCdnUrlInConsole { get; set; } = true;
+
+        /// <summary>
         /// Is index enabled
         /// </summary>
         public static bool IndexEnabled { get { return Config.Default.OutputType == OutputType.Index || Config.Default.OutputType == OutputType.Both; } }
@@ -274,7 +279,7 @@ namespace RobloxUltimateScraper
                 Error = error
             };
 
-            Console.WriteLine(output);
+            Console.WriteLine(output.ToString(trimCdnUrl: ShouldTrimCdnUrlInConsole));
 
             _Index.Add(output);
         }

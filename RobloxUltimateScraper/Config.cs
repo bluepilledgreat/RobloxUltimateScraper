@@ -294,5 +294,8 @@ namespace RobloxUltimateScraper
                 _baseUrl = value;
             }
         }
+
+        [Option("trimcdnurlinconsole", Required = false, Default = null, HelpText = "Should the CDN url in console be trimmed.")]
+        public bool? TrimCdnUrlInConsole { get; set; }
     }
 }
