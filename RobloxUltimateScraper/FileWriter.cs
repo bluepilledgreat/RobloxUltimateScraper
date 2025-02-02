@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -40,6 +41,11 @@ namespace RobloxUltimateScraper
                     case CompressionType.BZip2:
                         ICSharpCode.SharpZipLib.BZip2.BZip2.Compress(stream, ms, false, 9);
                         filePath += ".bz2";
+                        break;
+                    case CompressionType.Zstd:
+                        using (var compressor = new ZstdSharp.CompressionStream(ms, 9))
+                            stream.CopyTo(compressor);
+                        filePath += ".zst";
                         break;
                     default:
                         stream.CopyTo(ms);

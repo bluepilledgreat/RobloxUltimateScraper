@@ -57,9 +57,12 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// BZip2 compression
         /// </summary>
-        BZip2
+        BZip2,
 
-        // TODO: zstd?
+        /// <summary>
+        /// Zstd compression
+        /// </summary>
+        Zstd
     }
 
     /// <summary>
