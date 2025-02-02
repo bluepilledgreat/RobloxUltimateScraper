@@ -258,7 +258,7 @@ namespace RobloxUltimateScraper
         /// Roblox authentication cookie (ROBLOSECURITY).
         /// For copylocked game scraping.
         /// </summary>
-        [Option("cookies", Required = false, HelpText = "Roblox authentication cookie (.ROBLOSECURITY).")]
+        [Option("cookies", Required = false, HelpText = "Roblox authentication cookie (.ROBLOSECURITY). This argument is prioritised over the environment variable 'ROBLOXULTIMATESCRAPER_COOKIE'.")]
         public string? AuthCookie { get; set; }
 
         /// <summary>

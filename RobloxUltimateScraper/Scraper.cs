@@ -88,8 +88,25 @@ namespace RobloxUltimateScraper
 
             _CookieContainer = new CookieContainer();
 
+            string? cookie = null;
+
             if (!string.IsNullOrEmpty(Config.Default.AuthCookie))
-                _CookieContainer.Add(new Cookie(".ROBLOSECURITY", Config.Default.AuthCookie, "/", $".{Config.Default.BaseUrl}"));
+            {
+                Console.WriteLine("Using cookies from arguments.");
+                cookie = Config.Default.AuthCookie;
+            }
+            else
+            {
+                string? envValue = Environment.GetEnvironmentVariable("ROBLOXULTIMATESCRAPER_COOKIE");
+                if (!string.IsNullOrEmpty(envValue))
+                {
+                    Console.WriteLine("Using cookies from environment variables.");
+                    cookie = envValue;
+                }
+            }
+            
+            if (cookie != null)
+                _CookieContainer.Add(new Cookie(".ROBLOSECURITY", cookie, "/", $".{Config.Default.BaseUrl}"));
 
             HttpClientHandler httpClientHandler = new HttpClientHandler
             {
