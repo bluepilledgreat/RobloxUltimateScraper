@@ -245,8 +245,8 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Assets output extension.
         /// </summary>
-        [Option('e', "extension", Required = false, HelpText = "Assets output extension.")]
-        public string OutputExtension { get; set; } = "";
+        [Option('e', "extension", Required = false, Default = "Auto", HelpText = "Assets output extension. A value of 'Auto' will determine the extension based on the asset type.")]
+        public string OutputExtension { get; set; } = "Auto";
 
         /// <summary>
         /// Number of scrape workers.

@@ -16,9 +16,9 @@ namespace RobloxUltimateScraper
         /// </summary>
         /// <param name="fileName">File name</param>
         /// <returns>Output file name</returns>
-        public static string BuildOutputFileName(string fileName)
+        public static string BuildOutputFileName(string fileName, string? fileExtension)
         {
-            return fileName + (!string.IsNullOrEmpty(Config.Default.OutputExtension) ? $".{Config.Default.OutputExtension}" : "");
+            return fileName + (!string.IsNullOrEmpty(fileExtension) ? $".{fileExtension}" : "");
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
-﻿using RobloxUltimateScraper.Models;
+﻿using RobloxUltimateScraper.Enums;
+using RobloxUltimateScraper.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -19,6 +20,11 @@ namespace RobloxUltimateScraper
         /// Assets to download
         /// </summary>
         public static Queue<AssetInput> Assets { get; }
+
+        /// <summary>
+        /// File extension to be used for saving
+        /// </summary>
+        public static string? FileExtension { get; set; } = null;
 
         /// <summary>
         /// Is index enabled
@@ -135,30 +141,55 @@ namespace RobloxUltimateScraper
             }
         }
 
+        public struct AssetDeliveryInformation
+        {
+            public bool Success;
+            public string Error;
+
+            public int TotalVersions;
+            public AssetType AssetType;
+        }
+
         /// <summary>
-        /// Retrieves the total asset versions of an asset
+        /// Retrieves information from asset delivery
         /// </summary>
         /// <param name="id">Asset Id</param>
-        /// <returns>Success, Error string, Total asset versions</returns>
-        public static async Task<(bool, string, int)> GetTotalAssetVersions(long id)
+        /// <returns>Asset delivery information</returns>
+        public static async Task<AssetDeliveryInformation> GetAssetDeliveryInformation(long id)
         {
             HttpResponseMessage response = await AssetRequest(id);
 
             if (response.StatusCode == HttpStatusCode.Conflict)
-                return (false, "Insufficient permissions to download asset", 0);
+                return new AssetDeliveryInformation { Success = false, Error = "Insufficient permissions to download asset" };
 
             if (!IsSuccessStatusCode(response.StatusCode, allowForbidden: true)) // 403 means that the latest version is deleted but can still download
-                return (false, $"Unhandled status code ({(int)response.StatusCode})", 0);
+                return new AssetDeliveryInformation { Success = false, Error = $"Unhandled status code ({(int)response.StatusCode})" };
 
-            if (!response.Headers.TryGetValues("roblox-assetversionnumber", out IEnumerable<string>? values))
-                return (false, "Asset version header is missing", 0); // this should never happen, but handle anyways
+            IEnumerable<string>? values;
+            int versions = 0;
+            AssetType assetType = 0;
 
-            string versionsStr = values.First();
+            {
+                if (!response.Headers.TryGetValues("roblox-assetversionnumber", out values))
+                    return new AssetDeliveryInformation { Success = false, Error = "Asset version header is missing" }; // this should never happen, but handle anyways
 
-            if (!int.TryParse(versionsStr, out int versions))
-                return (false, "Asset version header is non-numeric", 0); // this should ALSO never happen, but handle anyways
+                string versionsStr = values.First();
 
-            return (true, "Success", versions);
+                if (!int.TryParse(versionsStr, out versions))
+                    return new AssetDeliveryInformation { Success = false, Error = "Asset version header is non-numeric" }; // this should ALSO never happen, but handle anyways
+            }
+
+            {
+                if (!response.Headers.TryGetValues("roblox-assettypeid", out values))
+                    return new AssetDeliveryInformation { Success = false, Error = "Asset type ID header is missing" }; // this should never happen, but handle anyways
+
+                string versionsStr = values.First();
+
+                if (!Enum.TryParse(versionsStr, out assetType))
+                    return new AssetDeliveryInformation { Success = false, Error = "Asset type ID header is invalid" }; // this should ALSO never happen, but handle anyways
+            }
+
+            return new AssetDeliveryInformation { Success = true, TotalVersions = versions, AssetType = assetType };
         }
 
         /// <summary>
@@ -259,7 +290,7 @@ namespace RobloxUltimateScraper
                 {
                     string outputName = BuildAssetOutputFileName(id, version);
                     string path = Path.Combine(Config.Default.OutputDirectory, outputName);
-                    string outputPath = FileWriter.BuildOutputFileName(path);
+                    string outputPath = FileWriter.BuildOutputFileName(path, FileExtension);
 
                     DateTime? lastModifiedDT = lastModified != null ? DateTime.Parse(lastModified) : null;
 

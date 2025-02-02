@@ -1,5 +1,6 @@
 ﻿using CommandLine;
 using CommandLine.Text;
+using RobloxUltimateScraper.Enums;
 using RobloxUltimateScraper.Models;
 
 namespace RobloxUltimateScraper
@@ -95,18 +96,20 @@ namespace RobloxUltimateScraper
                 Config.Default.OutputDirectory = $"Asset_{assetId}";
 
             // get all place versions
-            (bool versionsSuccess, string versionsMessage, int versions) = await Scraper.GetTotalAssetVersions(assetId);
+            var assetDeliveryInfo = await Scraper.GetAssetDeliveryInformation(assetId);
 
-            if (!versionsSuccess)
+            if (!assetDeliveryInfo.Success)
             {
-                Console.WriteLine($"Failed to fetch versions for asset {assetId}: {versionsMessage}");
+                Console.WriteLine($"Failed to fetch versions for asset {assetId}: {assetDeliveryInfo.Error}");
                 Environment.Exit(1);
             }
 
-            Console.WriteLine($"Asset {assetId} has {versions} versions!");
+            Console.WriteLine($"Asset {assetId} has {assetDeliveryInfo.TotalVersions} versions!");
+
+            Scraper.FileExtension = Config.Default.OutputExtension == "Auto" ? assetDeliveryInfo.AssetType.GetExtension() : Config.Default.OutputExtension;
 
             // add to queue
-            for (int i = 1; i <= versions; i++)
+            for (int i = 1; i <= assetDeliveryInfo.TotalVersions; i++)
             {
                 Scraper.Assets.Enqueue(new AssetInput
                 {
@@ -116,8 +119,8 @@ namespace RobloxUltimateScraper
             }
 
             // set up titles
-            SetAssetScraperTitle(assetId, 0, 0, versions);
-            Scraper.OnDownloadFinished += () => SetAssetScraperTitle(assetId, Scraper.SuccessfulDownloads, Scraper.FailedDownloads, versions);
+            SetAssetScraperTitle(assetId, 0, 0, assetDeliveryInfo.TotalVersions);
+            Scraper.OnDownloadFinished += () => SetAssetScraperTitle(assetId, Scraper.SuccessfulDownloads, Scraper.FailedDownloads, assetDeliveryInfo.TotalVersions);
 
             // start workers
             List<Task> workers = new List<Task>();
@@ -129,7 +132,7 @@ namespace RobloxUltimateScraper
 
             // finalise
             Scraper.PrintDownloadStatistics();
-            Scraper.WriteIndexFile($"{assetId} asset versions on {DateTime.Now.ToString("R")} ({versions} versions)");
+            Scraper.WriteIndexFile($"{assetId} asset versions on {DateTime.Now.ToString("R")} ({assetDeliveryInfo.TotalVersions} versions)");
         }
     }
 }
