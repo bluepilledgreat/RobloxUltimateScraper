@@ -15,7 +15,7 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Successful or failed download event.
         /// </summary>
-        public delegate void DownloadFinished();
+        public delegate void DownloadFinished(bool success);
 
         private object _lock = new object();
 
@@ -32,15 +32,17 @@ namespace RobloxUltimateScraper
         /// </summary>
         public string? FileExtension { get; set; } = null;
 
+        private int _successfulDownloads;
         /// <summary>
         /// Versions that successfully downloaded
         /// </summary>
-        public int SuccessfulDownloads { get; private set; }
+        public int SuccessfulDownloads => _successfulDownloads;
 
+        private int _failedDownloads;
         /// <summary>
         /// Versions that failed to download
         /// </summary>
-        public int FailedDownloads { get; private set; }
+        public int FailedDownloads => _failedDownloads;
 
         /// <summary>
         /// Event that fires upon a successful or failed download.
@@ -180,6 +182,8 @@ namespace RobloxUltimateScraper
 
             if (response.StatusCode == HttpStatusCode.Conflict)
                 return (false, "Insufficient permissions to download asset", "");
+            else if (response.StatusCode == HttpStatusCode.Forbidden)
+                return (false, "Asset version has been deleted", "");
 
             if (!IsSuccessStatusCode(response.StatusCode, allowForbidden: true)) // 403 means that the latest version is deleted but can still download
                 return (false, $"Unhandled status code ({(int)response.StatusCode}) ({await response.Content.ReadAsStringAsync()})", "");
@@ -280,8 +284,8 @@ namespace RobloxUltimateScraper
         /// </summary>
         private void FireAssetSuccess()
         {
-            SuccessfulDownloads++;
-            OnDownloadFinished?.Invoke();
+            Interlocked.Increment(ref _successfulDownloads);
+            OnDownloadFinished?.Invoke(true);
         }
 
         /// <summary>
@@ -289,8 +293,8 @@ namespace RobloxUltimateScraper
         /// </summary>
         private void FireAssetFailed()
         {
-            SuccessfulDownloads++;
-            OnDownloadFinished?.Invoke();
+            Interlocked.Increment(ref _failedDownloads);
+            OnDownloadFinished?.Invoke(false);
         }
 
         /// <summary>
@@ -330,8 +334,13 @@ namespace RobloxUltimateScraper
                     FireAssetFailed();
                     continue;
                 }
-
-                if (!IsSuccessStatusCode(cdnResponse.StatusCode))
+                else if (cdnResponse.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    LogAsset(error: $"Failed to fetch {AssetId} v{version} ({cdnUrl}): Too many requests", version: version);
+                    FireAssetFailed();
+                    continue;
+                }
+                else if (!IsSuccessStatusCode(cdnResponse.StatusCode))
                 {
                     LogAsset(error: $"Failed to fetch {AssetId} v{version} ({cdnUrl}): Unknown status code ({(int)cdnResponse.StatusCode})", version: version);
                     FireAssetFailed();
@@ -349,16 +358,16 @@ namespace RobloxUltimateScraper
         /// </summary>
         public void PrintDownloadStatistics()
         {
-            Console.WriteLine($"Successful Downloads: {SuccessfulDownloads}");
-            Console.WriteLine($"Failed Downloads: {FailedDownloads}");
-            Console.WriteLine($"Total Downloads: {SuccessfulDownloads + FailedDownloads}");
+            Console.WriteLine($"{AssetId} | Successful Downloads: {SuccessfulDownloads}");
+            Console.WriteLine($"{AssetId} | Failed Downloads: {FailedDownloads}");
+            Console.WriteLine($"{AssetId} | Total Downloads: {SuccessfulDownloads + FailedDownloads}");
         }
 
         /// <summary>
         /// Writes the index file
         /// </summary>
         /// <param name="header">Index header</param>
-        public void WriteIndexFile(string header)
+        public void WriteIndexFile()
         {
             if (!Config.Default.OutputType.IsIndexEnabled())
                 return;
@@ -375,7 +384,7 @@ namespace RobloxUltimateScraper
                 // create index file contents
                 StringBuilder builder = new StringBuilder();
 
-                builder.AppendLine(header);
+                builder.AppendLine($"{AssetId} asset versions on {DateTime.Now.ToString("R")} ({TotalVersions} versions)");
 
                 foreach (AssetOutput asset in _index)
                     builder.AppendLine(asset.ToString());

@@ -7,7 +7,7 @@ namespace RobloxUltimateScraper
 {
     internal class Program
     {
-        static async Task Main(string[] args)
+        static void Main(string[] args)
         {
             if (args.Length == 0) // make it display the help menu
                 args = new string[] { "--help" };
@@ -32,7 +32,6 @@ namespace RobloxUltimateScraper
             // TODO: add functionality for
             //       list
             //       list versions
-            //       range
             switch (Config.Default.Scraper)
             {
                 case ScraperType.None:
@@ -53,7 +52,7 @@ namespace RobloxUltimateScraper
                     break;
 
                 case ScraperType.Range:
-                    Console.WriteLine("Range scraper has not been implemented yet.");
+                    RunRangeScraper();
                     break;
 
                 default:
@@ -96,7 +95,7 @@ namespace RobloxUltimateScraper
 
             string outputDirectory;
 
-            if (string.IsNullOrEmpty(Config.Default.OutputDirectory) && Config.Default.OutputType != OutputType.Console)
+            if (string.IsNullOrEmpty(Config.Default.OutputDirectory))
                 outputDirectory = $"Asset_{assetId}";
             else
                 outputDirectory = Config.Default.OutputDirectory;
@@ -108,7 +107,7 @@ namespace RobloxUltimateScraper
 
             // set up titles
             SetAssetScraperTitle(assetId, 0, 0, scraper.TotalVersions);
-            scraper.OnDownloadFinished += () => SetAssetScraperTitle(assetId, scraper.SuccessfulDownloads, scraper.FailedDownloads, scraper.TotalVersions);
+            scraper.OnDownloadFinished += (_) => SetAssetScraperTitle(assetId, scraper.SuccessfulDownloads, scraper.FailedDownloads, scraper.TotalVersions);
 
             // start workers
             List<Task> workers = new List<Task>();
@@ -120,7 +119,89 @@ namespace RobloxUltimateScraper
 
             // finalise
             scraper.PrintDownloadStatistics();
-            scraper.WriteIndexFile($"{assetId} asset versions on {DateTime.Now.ToString("R")} ({scraper.TotalVersions} versions)");
+            scraper.WriteIndexFile();
+        }
+
+        class RangeScraperData
+        {
+            public ulong StartRange = 0;
+            public ulong EndRange = 0;
+
+            public ulong TotalIds = 0;
+            public int DownloadedIds = 0;
+            public int ErrorIds = 0;
+
+            public int TotalVersions = 0;
+            public int DownloadedVersions = 0;
+            public int ErrorVersions = 0;
+        }
+
+        static async Task RangeScraperTitleLogic(RangeScraperData data, CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                Console.Title = $"RobloxUltimateScraper | Range {data.StartRange}-{data.EndRange} | " +
+                    $"{data.DownloadedIds}/{data.TotalIds} IDs ({data.ErrorIds} errors) | " +
+                    $"{data.DownloadedIds}/{data.TotalVersions} Versions ({data.ErrorVersions} errors)";
+
+                try
+                {
+                    await Task.Delay(1000, token);
+                }
+                catch (TaskCanceledException)
+                {
+                    return;
+                }
+            }    
+        }
+
+        static void RunRangeScraper()
+        {
+            string outputDirectory;
+
+            if (string.IsNullOrEmpty(Config.Default.OutputDirectory))
+                outputDirectory = $"Range_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+            else
+                outputDirectory = Config.Default.OutputDirectory;
+
+            if (Config.Default.OutputType != OutputType.Console)
+                Directory.CreateDirectory(outputDirectory);
+
+            RangeScraperData data = new RangeScraperData()
+            {
+                StartRange = Config.Default.ScraperStartRange,
+                EndRange = Config.Default.ScraperEndRange,
+                TotalIds = Config.Default.ScraperEndRange - Config.Default.ScraperStartRange
+            };
+
+            RangeScraper scraper = new RangeScraper(Config.Default.ScraperStartRange, Config.Default.ScraperEndRange, outputDirectory);
+
+            // set up titles
+            scraper.OnAssetDownloadFinished += (bool success) => { Interlocked.Increment(ref data.DownloadedVersions); if (!success) { Interlocked.Increment(ref data.ErrorVersions); } };
+            scraper.OnAssetVersionsDiscovered += (int versions) => { Interlocked.Add(ref data.TotalVersions, versions); };
+
+            scraper.OnAssetFinished += () => Interlocked.Increment(ref data.DownloadedIds);
+            scraper.OnAssetError += () => { Interlocked.Increment(ref data.DownloadedIds); Interlocked.Increment(ref data.ErrorIds); };
+
+            CancellationTokenSource cts = new CancellationTokenSource();
+            Task titleUpdateTask = Task.Run(() => RangeScraperTitleLogic(data, cts.Token));
+
+            // start workers
+            List<Task> workers = new List<Task>();
+
+            for (int i = 1; i <= Config.Default.Workers; i++)
+                workers.Add(Task.Run(scraper.StartWorker));
+
+            Task.WaitAll(workers.ToArray());
+            cts.Cancel();
+
+            Console.WriteLine($"ID Range: {data.StartRange}-{data.EndRange}");
+            Console.WriteLine($"Total IDs: {data.TotalIds}");
+            Console.WriteLine($"Successful ID Downloads: {data.DownloadedIds}");
+            Console.WriteLine($"Failed ID Downloads: {data.ErrorIds}");
+            Console.WriteLine($"Total Versions: {data.TotalVersions}");
+            Console.WriteLine($"Successful Version Downloads: {data.DownloadedVersions}");
+            Console.WriteLine($"Failed Version Downloads: {data.ErrorVersions}");
         }
     }
 }
