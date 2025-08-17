@@ -1,8 +1,5 @@
 ﻿namespace RobloxUltimateScraper.Enums
 {
-    /// <summary>
-    /// Automatically generated, do not modify.
-    /// </summary>
     internal enum AssetType
     {
         Product = 0,
@@ -81,7 +78,10 @@
         CodeSnippet = 80,
         AdsVideo = 81,
         OtaUpdate = 82,
-        Screenshot = 83
+        Screenshot = 83,
+        RuntimePropertySet = 84,
+        StorePreviewVideo = 85,
+        GamePreviewVideo = 86
     }
 
     internal static class AssetTypeEx
@@ -164,7 +164,10 @@
             [AssetType.CodeSnippet] = null,
             [AssetType.AdsVideo] = null,
             [AssetType.OtaUpdate] = null,
-            [AssetType.Screenshot] = null
+            [AssetType.Screenshot] = null,
+            [AssetType.RuntimePropertySet] = null,
+            [AssetType.StorePreviewVideo] = null,
+            [AssetType.GamePreviewVideo] = null
         };
 
         public static string? GetExtension(this AssetType type)
