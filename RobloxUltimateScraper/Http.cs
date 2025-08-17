@@ -41,7 +41,7 @@ namespace RobloxUltimateScraper
             {
                 Timeout = TimeSpan.FromSeconds(Config.Default.HttpTimeout)
             };
-            //_HttpClient.DefaultRequestHeaders.Add("User-Agent", "Roblox/WinINet");
+            Client.DefaultRequestHeaders.Add("User-Agent", "Roblox/WinInet");
         }
     }
 }
