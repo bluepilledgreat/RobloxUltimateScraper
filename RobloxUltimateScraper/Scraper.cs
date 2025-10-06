@@ -259,7 +259,7 @@ namespace RobloxUltimateScraper
 
             using (Stream stream = await response.Content.ReadAsStreamAsync())
             {
-                fileSize = Math.Round(stream.Length / 1024f / 1024f, 6);
+                fileSize = Math.Round(stream.Length / 1024.0 / 1024.0, 6);
 
                 if (Config.Default.OutputType.IsFileSavingEnabled())
                 {
