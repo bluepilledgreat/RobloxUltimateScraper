@@ -251,7 +251,9 @@ namespace RobloxUltimateScraper
             string cdnUrl)
         {
             // get last modified
-            string? lastModified = response.Content.Headers.GetValues("last-modified").FirstOrDefault();
+            string? lastModified = null;
+            if (response.Content.Headers.TryGetValues("last-modified", out IEnumerable<string>? lastModifiedValues))
+                lastModified = lastModifiedValues.First();
 
             double? fileSize = null;
 
