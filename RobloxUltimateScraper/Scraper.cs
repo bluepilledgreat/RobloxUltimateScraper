@@ -86,7 +86,6 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Creates a request to https://assetdelivery.roblox.com/v1/asset/
         /// </summary>
-        /// <param name="id">Asset Id</param>
         /// <param name="version">Asset Version (0 for latest)</param>
         /// <returns>Http response</returns>
         public Task<HttpResponseMessage> AssetRequest(int version = 0)
@@ -128,7 +127,6 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Retrieves information from asset delivery
         /// </summary>
-        /// <param name="id">Asset Id</param>
         /// <returns>Asset delivery information</returns>
         public async Task<AssetDeliveryInformation> GetAssetDeliveryInformation()
         {
@@ -173,7 +171,6 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Retrieves the CDN url from an asset id
         /// </summary>
-        /// <param name="id">Asset Id</param>
         /// <param name="version">Version (0 for latest)</param>
         /// <returns>Success, Error string, CDN url</returns>
         public async Task<(bool, string, string)> GetCdnUrl(int version = 0)
@@ -199,7 +196,6 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Constructs the asset output path
         /// </summary>
-        /// <param name="id">Id</param>
         /// <param name="version">Version</param>
         /// <returns>Asset output path</returns>
         public string BuildAssetOutputFileName(int version)
@@ -368,7 +364,6 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Writes the index file
         /// </summary>
-        /// <param name="header">Index header</param>
         public void WriteIndexFile()
         {
             if (!Config.Default.OutputType.IsIndexEnabled())
