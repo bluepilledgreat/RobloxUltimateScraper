@@ -163,7 +163,7 @@ namespace RobloxUltimateScraper
                 if (!Enum.TryParse(versionsStr, out assetType))
                 {
                     Debug.Assert(false);
-                    assetType = AssetType.Product;
+                    assetType = AssetType.Unknown;
                 }
             }
 
