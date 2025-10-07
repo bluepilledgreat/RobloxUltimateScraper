@@ -34,7 +34,7 @@
             OutputDirectory = outputDirectory;
         }
 
-        public async Task StartWorker()
+        public async Task StartWorker(HttpClient httpClient)
         {
             while (EndRange > CurrentId)
             {
@@ -56,7 +56,7 @@
                 }
 
                 Scraper scraper = new Scraper(id, outputDirectory);
-                var result = await scraper.Setup();
+                var result = await scraper.Setup(httpClient);
                 if (!result.Success)
                 {
                     Console.WriteLine($"Failed to download {id} ({result.Message})");
@@ -66,13 +66,29 @@
                 OnAssetVersionsDiscovered?.Invoke(scraper.TotalVersions);
 
                 scraper.OnDownloadFinished += (bool success) => OnAssetDownloadFinished?.Invoke(success);
-                await scraper.StartWorker();
+                await scraper.StartWorker(httpClient);
 
                 scraper.PrintDownloadStatistics();
                 scraper.WriteIndexFile();
 
                 Console.WriteLine($"{id} has been completed.");
                 OnAssetFinished?.Invoke();
+            }
+        }
+
+        public async Task StartWorker()
+        {
+            HttpClient httpClient = Config.Default.SingleHttpClient ? Http.Client : Http.CreateClient();
+
+            try
+            {
+                await StartWorker(httpClient);
+            }
+            finally
+            {
+                // only dispose if it isnt the global http client
+                if (httpClient != Http.Client)
+                    httpClient.Dispose();
             }
         }
     }

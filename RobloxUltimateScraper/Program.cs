@@ -181,7 +181,7 @@ namespace RobloxUltimateScraper
                 outputDirectory = Config.Default.OutputDirectory;
 
             Scraper scraper = new Scraper(assetId, outputDirectory);
-            scraper.Setup().Wait();
+            scraper.Setup(Http.Client).Wait();
 
             Console.WriteLine($"Asset {assetId} has {scraper.TotalVersions} versions!");
 

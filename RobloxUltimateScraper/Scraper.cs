@@ -69,9 +69,9 @@ namespace RobloxUltimateScraper
             public string Message;
         }
 
-        public async Task<SetupResult> Setup()
+        public async Task<SetupResult> Setup(HttpClient httpClient)
         {
-            var assetDeliveryInfo = await GetAssetDeliveryInformation(Http.Client);
+            var assetDeliveryInfo = await GetAssetDeliveryInformation(httpClient);
             if (!assetDeliveryInfo.Success)
                 return new SetupResult { Success = false, Message = $"Failed to fetch versions for asset {AssetId}: {assetDeliveryInfo.Error}" };
 
@@ -350,10 +350,8 @@ namespace RobloxUltimateScraper
         /// </summary>
         /// <returns>Worker</returns>
         // TODO: add try catch blocks. give 3 retries w/ exceptions
-        public async Task StartWorker()
+        public async Task StartWorker(HttpClient httpClient)
         {
-            HttpClient httpClient = Config.Default.SingleHttpClient ? Http.Client : Http.CreateClient();
-
             while (TotalVersions > CurrentVersion)
             {
                 int version;
@@ -391,10 +389,22 @@ namespace RobloxUltimateScraper
                 await LogAssetFromCdnHttpMessageResponse(cdnDownloadResponse, version, cdnUrl);
                 FireAssetSuccess();
             }
+        }
 
-            // only dispose if it isnt the global http client
-            if (httpClient != Http.Client)
-                httpClient.Dispose();
+        public async Task StartWorker()
+        {
+            HttpClient httpClient = Config.Default.SingleHttpClient ? Http.Client : Http.CreateClient();
+
+            try
+            {
+                await StartWorker(httpClient);
+            }
+            finally
+            {
+                // only dispose if it isnt the global http client
+                if (httpClient != Http.Client)
+                    httpClient.Dispose();
+            }
         }
 
         /// <summary>
