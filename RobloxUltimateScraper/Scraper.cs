@@ -175,22 +175,69 @@ namespace RobloxUltimateScraper
         /// <returns>Success, Error string, CDN url</returns>
         public async Task<(bool, string, string)> GetCdnUrl(int version = 0)
         {
-            HttpResponseMessage response = await AssetRequest(version);
+            try
+            {
+                HttpResponseMessage response = await AssetRequest(version);
 
-            if (response.StatusCode == HttpStatusCode.Conflict)
-                return (false, "Insufficient permissions to download asset", "");
-            else if (response.StatusCode == HttpStatusCode.Forbidden)
-                return (false, "Asset version has been deleted", "");
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.Conflict:
+                        return (false, "Insufficient permissions to download asset", "");
 
-            if (!IsSuccessStatusCode(response.StatusCode, allowForbidden: true)) // 403 means that the latest version is deleted but can still download
-                return (false, $"Unhandled status code ({(int)response.StatusCode}) ({await response.Content.ReadAsStringAsync()})", "");
+                    case HttpStatusCode.Forbidden:
+                        return (false, "Asset version has been deleted", "");
 
-            if (!response.Headers.TryGetValues("Location", out IEnumerable<string>? values))
-                return (false, "Location header is missing", ""); // this should never happen, but handle anyways
+                    case HttpStatusCode.TooManyRequests:
+                        return (false, "Too many requests", "");
+                }
 
-            string location = values.First();
+                if (!IsSuccessStatusCode(response.StatusCode, allowForbidden: true)) // 403 means that the latest version is deleted but can still download
+                    return (false, $"Unhandled status code ({(int)response.StatusCode}) ({await response.Content.ReadAsStringAsync()})", "");
 
-            return (true, "Success", location);
+                if (!response.Headers.TryGetValues("Location", out IEnumerable<string>? values))
+                    return (false, "Location header is missing", ""); // this should never happen, but handle anyways
+
+                string location = values.First();
+
+                return (true, "Success", location);
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.ToString(), "");
+            }
+        }
+
+        /// <summary>
+        /// Gets content from the CDN using a specified URL
+        /// </summary>
+        /// <param name="url">CDN Url</param>
+        /// <returns>Success, Error Message, HttpResponseMessage</returns>
+        public async Task<(bool, string, HttpResponseMessage?)> GetCdnContent(string url)
+        {
+            try
+            {
+                HttpResponseMessage response = await Http.Client.GetAsync(url);
+
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.Forbidden:
+                        return (false, "Asset not found on CDN", null);
+
+                    case HttpStatusCode.TooManyRequests:
+                        return (false, "Too many requests", null);
+
+                    default:
+                        if (!IsSuccessStatusCode(response.StatusCode))
+                            return (false, $"Unknown status code ({(int)response.StatusCode})", null);
+                        break;
+                }
+
+                return (true, "Success", response);
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.ToString(), null);
+            }
         }
 
         /// <summary>
@@ -324,29 +371,19 @@ namespace RobloxUltimateScraper
                 }
 
                 // download the asset
-                HttpResponseMessage cdnResponse = await Http.Client.GetAsync(cdnUrl);
+                (bool cdnDownloadSuccess, string cdnDownloadMessage, HttpResponseMessage? cdnDownloadResponse) = await GetCdnContent(cdnUrl);
 
-                if (cdnResponse.StatusCode == HttpStatusCode.Forbidden)
+                if (!cdnDownloadSuccess)
                 {
-                    LogAsset(error: $"Failed to fetch {AssetId} v{version} ({cdnUrl}): Asset not found on CDN", version: version);
+                    LogAsset(error: $"Failed to fetch {AssetId} v{version} ({cdnUrl}): {cdnDownloadMessage}", version: version);
                     FireAssetFailed();
                     continue;
                 }
-                else if (cdnResponse.StatusCode == HttpStatusCode.TooManyRequests)
-                {
-                    LogAsset(error: $"Failed to fetch {AssetId} v{version} ({cdnUrl}): Too many requests", version: version);
-                    FireAssetFailed();
-                    continue;
-                }
-                else if (!IsSuccessStatusCode(cdnResponse.StatusCode))
-                {
-                    LogAsset(error: $"Failed to fetch {AssetId} v{version} ({cdnUrl}): Unknown status code ({(int)cdnResponse.StatusCode})", version: version);
-                    FireAssetFailed();
-                    continue;
-                }
+
+                Debug.Assert(cdnDownloadResponse != null);
 
                 // save!
-                await LogAssetFromCdnHttpMessageResponse(cdnResponse, version, cdnUrl);
+                await LogAssetFromCdnHttpMessageResponse(cdnDownloadResponse, version, cdnUrl);
                 FireAssetSuccess();
             }
         }
