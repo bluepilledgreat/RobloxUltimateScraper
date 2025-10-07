@@ -83,7 +83,7 @@ namespace RobloxUltimateScraper
         /// Use the asset range scraper.
         /// COMMAND LINE USE ONLY!
         /// </summary>
-        [Option('r', "range", Required = false, HelpText = "Use the asset range scraper. Parameter takes in [Start ID]-[End ID]. WIP!")]
+        [Option('r', "range", Required = false, HelpText = "Use the asset range scraper. Parameter takes in [Start ID]-[End ID].")]
         public string UseRangeScraper
         {
             set
