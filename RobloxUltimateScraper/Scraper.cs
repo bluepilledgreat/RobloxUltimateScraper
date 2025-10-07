@@ -71,7 +71,7 @@ namespace RobloxUltimateScraper
 
         public async Task<SetupResult> Setup()
         {
-            var assetDeliveryInfo = await GetAssetDeliveryInformation();
+            var assetDeliveryInfo = await GetAssetDeliveryInformation(Http.Client);
             if (!assetDeliveryInfo.Success)
                 return new SetupResult { Success = false, Message = $"Failed to fetch versions for asset {AssetId}: {assetDeliveryInfo.Error}" };
 
@@ -86,12 +86,13 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Creates a request to https://assetdelivery.roblox.com/v1/asset/
         /// </summary>
+        /// <param name="httpClient">Http client</param>
         /// <param name="version">Asset Version (0 for latest)</param>
         /// <returns>Http response</returns>
-        public Task<HttpResponseMessage> AssetRequest(int version = 0)
+        public Task<HttpResponseMessage> AssetRequest(HttpClient httpClient, int version = 0)
         {
             string url = $"https://assetdelivery.{Config.Default.BaseUrl}/v1/asset/?id={AssetId}&version={version}";
-            return Http.Client.GetAsync(url);
+            return httpClient.GetAsync(url);
         }
 
         /// <summary>
@@ -128,9 +129,9 @@ namespace RobloxUltimateScraper
         /// Retrieves information from asset delivery
         /// </summary>
         /// <returns>Asset delivery information</returns>
-        public async Task<AssetDeliveryInformation> GetAssetDeliveryInformation()
+        public async Task<AssetDeliveryInformation> GetAssetDeliveryInformation(HttpClient httpClient)
         {
-            HttpResponseMessage response = await AssetRequest();
+            HttpResponseMessage response = await AssetRequest(httpClient);
 
             if (response.StatusCode == HttpStatusCode.Conflict)
                 return new AssetDeliveryInformation { Success = false, Error = "Insufficient permissions to download asset" };
@@ -171,13 +172,14 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Retrieves the CDN url from an asset id
         /// </summary>
+        /// <param name="httpClient">Http client</param>
         /// <param name="version">Version (0 for latest)</param>
         /// <returns>Success, Error string, CDN url</returns>
-        public async Task<(bool, string, string)> GetCdnUrl(int version = 0)
+        public async Task<(bool, string, string)> GetCdnUrl(HttpClient httpClient, int version = 0)
         {
             try
             {
-                HttpResponseMessage response = await AssetRequest(version);
+                HttpResponseMessage response = await AssetRequest(httpClient, version);
 
                 switch (response.StatusCode)
                 {
@@ -210,13 +212,14 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Gets content from the CDN using a specified URL
         /// </summary>
+        /// <param name="httpClient">Http client</param>
         /// <param name="url">CDN Url</param>
         /// <returns>Success, Error Message, HttpResponseMessage</returns>
-        public async Task<(bool, string, HttpResponseMessage?)> GetCdnContent(string url)
+        public static async Task<(bool, string, HttpResponseMessage?)> GetCdnContent(HttpClient httpClient, string url)
         {
             try
             {
-                HttpResponseMessage response = await Http.Client.GetAsync(url);
+                HttpResponseMessage response = await httpClient.GetAsync(url);
 
                 switch (response.StatusCode)
                 {
@@ -349,6 +352,8 @@ namespace RobloxUltimateScraper
         // TODO: add try catch blocks. give 3 retries w/ exceptions
         public async Task StartWorker()
         {
+            HttpClient httpClient = Config.Default.SingleHttpClient ? Http.Client : Http.CreateClient();
+
             while (TotalVersions > CurrentVersion)
             {
                 int version;
@@ -361,7 +366,7 @@ namespace RobloxUltimateScraper
                 }
 
                 // get the url
-                (bool cdnGetSuccess, string cdnGetMessage, string cdnUrl) = await GetCdnUrl(version);
+                (bool cdnGetSuccess, string cdnGetMessage, string cdnUrl) = await GetCdnUrl(httpClient, version);
 
                 if (!cdnGetSuccess)
                 {
@@ -371,7 +376,7 @@ namespace RobloxUltimateScraper
                 }
 
                 // download the asset
-                (bool cdnDownloadSuccess, string cdnDownloadMessage, HttpResponseMessage? cdnDownloadResponse) = await GetCdnContent(cdnUrl);
+                (bool cdnDownloadSuccess, string cdnDownloadMessage, HttpResponseMessage? cdnDownloadResponse) = await GetCdnContent(httpClient, cdnUrl);
 
                 if (!cdnDownloadSuccess)
                 {
@@ -386,6 +391,10 @@ namespace RobloxUltimateScraper
                 await LogAssetFromCdnHttpMessageResponse(cdnDownloadResponse, version, cdnUrl);
                 FireAssetSuccess();
             }
+
+            // only dispose if it isnt the global http client
+            if (httpClient != Http.Client)
+                httpClient.Dispose();
         }
 
         /// <summary>

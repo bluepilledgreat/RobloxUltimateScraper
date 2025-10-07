@@ -41,12 +41,16 @@ namespace RobloxUltimateScraper
         /// <inheritdoc cref="CommandLineConfig.FailIfUnauthenticated"/>
         public bool FailIfUnauthenticated => _clConfig.FailIfUnauthenticated;
 
+        /// <inheritdoc cref="CommandLineConfig.SingleHttpClient"/>
+        public bool SingleHttpClient { get; }
+
         public Config(CommandLineConfig config)
         {
             _clConfig = config;
 
             CompressionLevel = _clConfig.CompressionLevelArgOtherName != null ? (int)_clConfig.CompressionLevelArgOtherName : _clConfig.CompressionLevelArg;
             TrimCdnUrlInConsole = _clConfig.TrimCdnUrlInConsole ?? OutputType != OutputType.Console;
+            SingleHttpClient = _clConfig.SingleHttpClientOtherName ?? _clConfig.SingleHttpClient;
         }
 
         public static void Initialise(CommandLineConfig commandLineConfig)
