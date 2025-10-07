@@ -35,6 +35,12 @@ namespace RobloxUltimateScraper
 
         public bool TrimCdnUrlInConsole { get; }
 
+        /// <inheritdoc cref="CommandLineConfig.DisableRobloxAuthChecks"/>
+        public bool DisableRobloxAuthChecks => _clConfig.DisableRobloxAuthChecks;
+
+        /// <inheritdoc cref="CommandLineConfig.FailIfUnauthenticated"/>
+        public bool FailIfUnauthenticated => _clConfig.FailIfUnauthenticated;
+
         public Config(CommandLineConfig config)
         {
             _clConfig = config;

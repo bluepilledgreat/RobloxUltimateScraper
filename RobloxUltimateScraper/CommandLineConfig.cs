@@ -194,5 +194,17 @@ namespace RobloxUltimateScraper
 
         [Option("trimcdnurlinconsole", Required = false, Default = null, HelpText = "Should the CDN url in console be trimmed.")]
         public bool? TrimCdnUrlInConsole { get; set; }
+
+        /// <summary>
+        /// Disables checks responsible for checking if the current run is authenticated.
+        /// </summary>
+        [Option("disablerobloxauthchecks", Required = false, Default = false, HelpText = "Disables checks responsible for checking if the current run is authenticated.")]
+        public bool DisableRobloxAuthChecks { get; set; } = false;
+
+        /// <summary>
+        /// Should fail if the current run is unauthenticated?
+        /// </summary>
+        [Option("failifunauthenticated", Required = false, Default = false, HelpText = "Should fail if the current run is unauthenticated?")]
+        public bool FailIfUnauthenticated { get; set; } = false;
     }
 }

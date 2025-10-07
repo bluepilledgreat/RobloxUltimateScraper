@@ -1,6 +1,7 @@
 ﻿using CommandLine;
 using CommandLine.Text;
 using RobloxUltimateScraper.Enums;
+using System.Net;
 using System.Reflection;
 
 namespace RobloxUltimateScraper
@@ -29,13 +30,27 @@ namespace RobloxUltimateScraper
 
             Config.Initialise(config);
 
+            try
+            {
+                Http.Init();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR]: Failed to initialise HTTP ({ex})");
+                Environment.Exit(1);
+                return;
+            }
+
+            if (!Config.Default.DisableRobloxAuthChecks)
+                CheckRobloxAuthStatus();
+
             // TODO: add functionality for
             //       list
             //       list versions
             switch (Config.Default.Scraper)
             {
                 case ScraperType.None:
-                    Console.WriteLine("No scraper chosen.");
+                    Console.WriteLine("No scraper selected.");
                     Console.WriteLine("Run the scraper with the --help argument for all commands.");
                     break;
 
@@ -69,6 +84,71 @@ namespace RobloxUltimateScraper
         {
             HelpText text = HelpText.AutoBuild(config);
             Console.WriteLine(text);
+        }
+
+        static void CheckRobloxAuthStatus()
+        {
+            RobloxAuthStatus status = GetRobloxAuthStatus(out int httpCode, out Exception? exception);
+
+            switch (status)
+            {
+                case RobloxAuthStatus.Unauthenticated:
+                    Console.WriteLine("[WARNING]: No authentication is set for this run. You may face problems downloading assets not authored by Roblox.");
+                    break;
+
+                case RobloxAuthStatus.InvalidAuth:
+                    Console.WriteLine("[ERROR]: Provided authentication cookie is invalid.");
+                    Environment.Exit(1);
+                    return;
+
+                case RobloxAuthStatus.Error:
+                    if (exception != null)
+                    {
+                        Console.WriteLine($"[WARNING]: Failed to check if authentication is valid ({exception.Message}).");
+                        Console.WriteLine(exception);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[WARNING]: Failed to check if authentication is valid (got unexpected HTTP code {httpCode}).");
+                    }
+                    break;
+
+            }
+
+            if (status != RobloxAuthStatus.Authenticated && Config.Default.FailIfUnauthenticated)
+            {
+                Console.WriteLine("[ERROR]: Fail if unauthenticated flag is enabled. Stopping execution.");
+                Environment.Exit(1);
+                return;
+            }
+        }
+
+        static RobloxAuthStatus GetRobloxAuthStatus(out int httpCode, out Exception? exception)
+        {
+            httpCode = 0;
+            exception = null;
+
+            if (!Http.HasRobloxAuth)
+                return RobloxAuthStatus.Unauthenticated;
+
+            try
+            {
+                HttpResponseMessage message = Http.Client.GetAsync("https://users.roblox.com/v1/users/authenticated").Result;
+
+                httpCode = (int)message.StatusCode;
+
+                return message.StatusCode switch
+                {
+                    HttpStatusCode.OK => RobloxAuthStatus.Authenticated,
+                    HttpStatusCode.Unauthorized => RobloxAuthStatus.InvalidAuth,
+                    _ => RobloxAuthStatus.Error
+                };
+            }
+            catch (Exception ex)
+            {
+                exception = ex;
+                return RobloxAuthStatus.Error;
+            }
         }
 
         // TODO: move asset scraper to a separate file
