@@ -1,4 +1,6 @@
-﻿namespace RobloxUltimateScraper
+﻿using RobloxUltimateScraper.Enums;
+
+namespace RobloxUltimateScraper
 {
     /// <summary>
     /// Range scraper
@@ -66,6 +68,11 @@
                 OnAssetVersionsDiscovered?.Invoke(scraper.TotalVersions);
 
                 scraper.OnDownloadFinished += (bool success) => OnAssetDownloadFinished?.Invoke(success);
+
+                // do not bother compressing images gathered using this scraper (unless specified otherwise by the config)
+                if (scraper.AssetType == AssetType.Image && !Config.Default.CompressImages)
+                    scraper.ShouldCompress = false;
+
                 await scraper.StartWorker(httpClient);
 
                 scraper.PrintDownloadStatistics();

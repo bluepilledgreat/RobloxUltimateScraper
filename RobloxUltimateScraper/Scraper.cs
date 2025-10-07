@@ -19,12 +19,29 @@ namespace RobloxUltimateScraper
 
         private object _lock = new object();
 
+        /// <summary>
+        /// Asset ID being downloaded
+        /// </summary>
         public ulong AssetId { get; }
 
+        /// <summary>
+        /// Asset type of the asset
+        /// </summary>
+        public AssetType AssetType { get; private set; } = AssetType.Unknown;
+
+        /// <summary>
+        /// Total versions present in this asset
+        /// </summary>
         public int TotalVersions { get; private set; }
 
+        /// <summary>
+        /// Most recent version being downloaded
+        /// </summary>
         public int CurrentVersion { get; private set; }
 
+        /// <summary>
+        /// Directory where to output the files to
+        /// </summary>
         public string OutputDirectory { get; }
 
         /// <summary>
@@ -48,6 +65,11 @@ namespace RobloxUltimateScraper
         /// Event that fires upon a successful or failed download.
         /// </summary>
         public event DownloadFinished? OnDownloadFinished;
+
+        /// <summary>
+        /// Should compress the files downloaded?
+        /// </summary>
+        public bool ShouldCompress { get; set; } = true;
 
         /// <summary>
         /// Index entries
@@ -75,6 +97,7 @@ namespace RobloxUltimateScraper
             if (!assetDeliveryInfo.Success)
                 return new SetupResult { Success = false, Message = $"Failed to fetch versions for asset {AssetId}: {assetDeliveryInfo.Error}" };
 
+            AssetType = assetDeliveryInfo.AssetType;
             TotalVersions = assetDeliveryInfo.TotalVersions;
 
             FileExtension = Config.Default.OutputExtension == "Auto" ? assetDeliveryInfo.AssetType.GetExtension() : Config.Default.OutputExtension;
@@ -315,7 +338,8 @@ namespace RobloxUltimateScraper
 
                     DateTime? lastModifiedDT = lastModified != null ? DateTime.Parse(lastModified) : null;
 
-                    FileWriter.Save(outputPath, stream, Config.Default.CompressionLevel, lastModifiedDT);
+                    CompressionType compressionType = ShouldCompress ? Config.Default.CompressionType : CompressionType.None;
+                    FileWriter.Save(outputPath, stream, compressionType, Config.Default.CompressionLevel, lastModifiedDT);
                 }
             }
 

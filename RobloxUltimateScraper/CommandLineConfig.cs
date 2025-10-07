@@ -210,11 +210,20 @@ namespace RobloxUltimateScraper
         [Option("failifunauthenticated", Required = false, Default = false, HelpText = "Should fail if the current run is unauthenticated?")]
         public bool FailIfUnauthenticated { get; set; } = false;
 
+        /// <summary>
+        /// Should only use a single and shared HTTP client for all scraper threads.
+        /// </summary>
         [Option("singlehttpclient", Required = false, Default = false, HelpText = "Should only use a single and shared HTTP client for all scraper threads. This was the behaviour present in 0.1.3.0 and before. Other name: --shc.")]
         public bool SingleHttpClient { get; set; } = false;
 
         // hack... again!!!
         [Option("shc", Required = false, Hidden = true)]
         public bool? SingleHttpClientOtherName { get; set; }
+
+        /// <summary>
+        /// Should images gathered using the range scraper be compressed?
+        /// </summary>
+        [Option("compressimages", Required = false, Default = false, HelpText = "Should images gathered using the range scraper be compressed?")]
+        public bool CompressImages { get; set; } = false;
     }
 }

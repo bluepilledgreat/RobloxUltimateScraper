@@ -45,6 +45,9 @@ namespace RobloxUltimateScraper
         /// <inheritdoc cref="CommandLineConfig.SingleHttpClient"/>
         public bool SingleHttpClient { get; }
 
+        /// <inheritdoc cref="CommandLineConfig.CompressImages"/>
+        public bool CompressImages => _clConfig.CompressImages;
+
         public Config(CommandLineConfig config)
         {
             _clConfig = config;
