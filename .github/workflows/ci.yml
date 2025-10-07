@@ -20,7 +20,7 @@ jobs:
         submodules: true
     - uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '6.x'
+        dotnet-version: '8.x'
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
@@ -32,4 +32,4 @@ jobs:
       with:
         name: RobloxUltimateScraper (${{ matrix.configuration }}, ${{ matrix.platform }})
         path: |
-          ./RobloxUltimateScraper/bin/${{ matrix.configuration }}/net6.0/${{ matrix.platform }}/publish/*
+          ./RobloxUltimateScraper/bin/${{ matrix.configuration }}/net8.0/${{ matrix.platform }}/publish/*
