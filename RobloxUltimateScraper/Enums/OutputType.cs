@@ -22,7 +22,7 @@
         IndexOnly = 1,
 
         /// <summary>
-        /// Console output
+        /// Console output only
         /// </summary>
         Console = 2,
 

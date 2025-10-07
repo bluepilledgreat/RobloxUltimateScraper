@@ -33,7 +33,8 @@ namespace RobloxUltimateScraper
 
         public string BaseUrl => _clConfig.BaseUrl;
 
-        public bool TrimCdnUrlInConsole { get; }
+        /// <inheritdoc cref="CommandLineConfig.TrimCdnUrl"/>
+        public TrimCdnUrlType TrimCdnUrl => _clConfig.TrimCdnUrl;
 
         /// <inheritdoc cref="CommandLineConfig.DisableRobloxAuthChecks"/>
         public bool DisableRobloxAuthChecks => _clConfig.DisableRobloxAuthChecks;
@@ -49,7 +50,6 @@ namespace RobloxUltimateScraper
             _clConfig = config;
 
             CompressionLevel = _clConfig.CompressionLevelArgOtherName != null ? (int)_clConfig.CompressionLevelArgOtherName : _clConfig.CompressionLevelArg;
-            TrimCdnUrlInConsole = _clConfig.TrimCdnUrlInConsole ?? OutputType != OutputType.Console;
             SingleHttpClient = _clConfig.SingleHttpClientOtherName ?? _clConfig.SingleHttpClient;
         }
 

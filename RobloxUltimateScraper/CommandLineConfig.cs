@@ -192,8 +192,11 @@ namespace RobloxUltimateScraper
             }
         }
 
-        [Option("trimcdnurlinconsole", Required = false, Default = null, HelpText = "Should the CDN url in console be trimmed.")]
-        public bool? TrimCdnUrlInConsole { get; set; }
+        /// <summary>
+        /// Decides where CDN url parameters should be trimmed.
+        /// </summary>
+        [Option("trim", Required = false, Default = TrimCdnUrlType.All, HelpText = "Decides where CDN url parameters should be trimmed. (Off, Console, Output, All)")]
+        public TrimCdnUrlType TrimCdnUrl { get; set; } = TrimCdnUrlType.All;
 
         /// <summary>
         /// Disables checks responsible for checking if the current run is authenticated.

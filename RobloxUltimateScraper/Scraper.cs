@@ -281,7 +281,7 @@ namespace RobloxUltimateScraper
                 Error = error
             };
 
-            Console.WriteLine(output.ToString(trimCdnUrl: Config.Default.TrimCdnUrlInConsole));
+            Console.WriteLine(output.ToString(trimCdnUrl: Config.Default.TrimCdnUrl.ShouldTrim(OutputType.Console)));
 
             _index.Add(output);
         }
@@ -430,7 +430,7 @@ namespace RobloxUltimateScraper
                 builder.AppendLine($"{AssetId} asset versions on {DateTime.Now.ToString("R")} ({TotalVersions} versions)");
 
                 foreach (AssetOutput asset in _index)
-                    builder.AppendLine(asset.ToString());
+                    builder.AppendLine(asset.ToString(trimCdnUrl: Config.Default.TrimCdnUrl.ShouldTrim(OutputType.Index)));
 
                 string contents = builder.ToString();
 
