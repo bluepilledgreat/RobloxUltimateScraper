@@ -235,5 +235,15 @@ namespace RobloxUltimateScraper
         // hack... again!!!
         [Option("mds", Required = false, Hidden = true)]
         public MultipleDownloadStructureType? MultipleDownloadStructureOtherName { get; set; }
+
+        /// <summary>
+        /// Only download assets with the given asset type.
+        /// </summary>
+        [Option("expectedassettype", Required = false, Default = null, HelpText = "Only download assets with the given asset type. Other name: --eat")]
+        public AssetType? ExpectedAssetType { get; set; }
+
+        // hack... again!!!
+        [Option("eat", Required = false, Hidden = true)]
+        public AssetType? ExpectedAssetTypeOtherName { get; set; }
     }
 }

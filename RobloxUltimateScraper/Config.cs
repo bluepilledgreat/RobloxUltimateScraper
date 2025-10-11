@@ -51,6 +51,9 @@ namespace RobloxUltimateScraper
         /// <inheritdoc cref="CommandLineConfig.MultipleDownloadStructure"/>
         public MultipleDownloadStructureType MultipleDownloadStructure { get; }
 
+        /// <inheritdoc cref="CommandLineConfig.ExpectedAssetType"/>
+        public AssetType? ExpectedAssetType { get; }
+
         public Config(CommandLineConfig config)
         {
             _clConfig = config;
@@ -58,6 +61,10 @@ namespace RobloxUltimateScraper
             CompressionLevel = _clConfig.CompressionLevelArgOtherName != null ? (int)_clConfig.CompressionLevelArgOtherName : _clConfig.CompressionLevelArg;
             SingleHttpClient = _clConfig.SingleHttpClientOtherName ?? _clConfig.SingleHttpClient;
             MultipleDownloadStructure = _clConfig.MultipleDownloadStructureOtherName ?? _clConfig.MultipleDownloadStructure;
+            ExpectedAssetType = _clConfig.ExpectedAssetTypeOtherName ?? _clConfig.ExpectedAssetType;
+
+            if (ExpectedAssetType == AssetType.Unknown)
+                throw new ApplicationException("Invalid value for ExpectedAssetType");
         }
 
         public static void Initialise(CommandLineConfig commandLineConfig)

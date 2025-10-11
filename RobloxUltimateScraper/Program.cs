@@ -188,6 +188,12 @@ namespace RobloxUltimateScraper
                 return;
             }
 
+            if (Config.Default.ExpectedAssetType.HasValue && scraper.AssetType != Config.Default.ExpectedAssetType.Value)
+            {
+                Console.WriteLine($"Asset {assetId}'s type is not whitelisted (expected {Config.Default.ExpectedAssetType})");
+                return;
+            }
+
             Console.WriteLine($"Asset {assetId} has {scraper.TotalVersions} versions!");
 
             // set up titles

@@ -9,7 +9,7 @@
     },
     "RobloxUltimateScraper - Range Scraper": {
       "commandName": "Project",
-      "commandLineArgs": "-w 5\r\n-c Zstd\r\n--cl 9\r\n-o Both\r\n-r 1000000-1000100\r\n-i All\r\n--mds Separated"
+      "commandLineArgs": "-w 5\r\n-c Zstd\r\n--cl 9\r\n-o Both\r\n-r 1000000-1000100\r\n-i All\r\n--mds Separated\r\n--eat Image"
     }
   }
 }

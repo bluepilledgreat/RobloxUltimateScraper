@@ -66,6 +66,14 @@ namespace RobloxUltimateScraper
                     OnAssetError?.Invoke();
                     continue;
                 }
+
+                if (Config.Default.ExpectedAssetType.HasValue && scraper.AssetType != Config.Default.ExpectedAssetType.Value)
+                {
+                    Console.WriteLine($"Asset {id}'s type is not whitelisted (expected {Config.Default.ExpectedAssetType})");
+                    OnAssetFinished?.Invoke();
+                    continue;
+                }
+
                 OnAssetVersionsDiscovered?.Invoke(scraper.TotalVersions);
 
                 scraper.OnDownloadFinished += (bool success) => OnAssetDownloadFinished?.Invoke(success);
