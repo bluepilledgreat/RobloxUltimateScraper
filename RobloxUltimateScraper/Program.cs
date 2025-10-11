@@ -233,7 +233,7 @@ namespace RobloxUltimateScraper
             {
                 Console.Title = $"RobloxUltimateScraper | Range {data.StartRange}-{data.EndRange} | " +
                     $"{data.DownloadedIds}/{data.TotalIds} IDs ({data.ErrorIds} errors) | " +
-                    $"{data.DownloadedIds}/{data.TotalVersions} Versions ({data.ErrorVersions} errors)";
+                    $"{data.DownloadedVersions}/{data.TotalVersions} Versions ({data.ErrorVersions} errors)";
 
                 try
                 {
