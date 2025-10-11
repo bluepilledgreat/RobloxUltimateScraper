@@ -187,6 +187,29 @@ namespace RobloxUltimateScraper
             }
         }
 
+        /// <summary>
+        /// Gets the status code from an assetdelivery response.
+        /// This function will use the <see cref="HttpResponseMessage.StatusCode"/> field and the <see cref="HttpResponseMessage.Content"/> to deduce the correct status code.
+        /// </summary>
+        /// <param name="responseMessage">Response message from assetdelivery</param>
+        /// <returns>Status code</returns>
+        private static HttpStatusCode GetAssetDeliveryStatusCode(HttpResponseMessage responseMessage)
+        {
+            switch (responseMessage.StatusCode)
+            {
+                case HttpStatusCode.Forbidden:
+                    // roblox updated assetdelivery to return 403 for copylocked assets
+                    // originally, it returned a 409
+                    // this breaks a bunch of existing logic, so we have to check the body aswell
+                    string responseContent = responseMessage.Content.ReadAsStringAsync().Result;
+                    bool isConflict = responseContent.Contains("User is not authorized to access Asset."); // this should suffice for now
+                    return isConflict ? HttpStatusCode.Conflict : HttpStatusCode.Forbidden;
+
+                default:
+                    return responseMessage.StatusCode;
+            }
+        }
+
         public struct AssetDeliveryInformation
         {
             public bool Success;
@@ -203,12 +226,13 @@ namespace RobloxUltimateScraper
         public async Task<AssetDeliveryInformation> GetAssetDeliveryInformation(HttpClient httpClient)
         {
             HttpResponseMessage response = await AssetRequest(httpClient);
+            HttpStatusCode statusCode = GetAssetDeliveryStatusCode(response);
 
-            if (response.StatusCode == HttpStatusCode.Conflict)
+            if (statusCode == HttpStatusCode.Conflict)
                 return new AssetDeliveryInformation { Success = false, Error = "Insufficient permissions to download asset" };
 
-            if (!IsSuccessStatusCode(response.StatusCode, allowForbidden: true)) // 403 means that the latest version is deleted but can still download
-                return new AssetDeliveryInformation { Success = false, Error = $"Unhandled status code ({(int)response.StatusCode})" };
+            if (!IsSuccessStatusCode(statusCode, allowForbidden: true)) // 403 means that the latest version is deleted but can still download
+                return new AssetDeliveryInformation { Success = false, Error = $"Unhandled status code ({(int)statusCode})" };
 
             IEnumerable<string>? values;
             int versions;
@@ -251,8 +275,9 @@ namespace RobloxUltimateScraper
             try
             {
                 HttpResponseMessage response = await AssetRequest(httpClient, version);
+                HttpStatusCode statusCode = GetAssetDeliveryStatusCode(response);
 
-                switch (response.StatusCode)
+                switch (statusCode)
                 {
                     case HttpStatusCode.Conflict:
                         return (false, "Insufficient permissions to download asset", "");
@@ -264,8 +289,8 @@ namespace RobloxUltimateScraper
                         return (false, "Too many requests", "");
                 }
 
-                if (!IsSuccessStatusCode(response.StatusCode, allowForbidden: true)) // 403 means that the latest version is deleted but can still download
-                    return (false, $"Unhandled status code ({(int)response.StatusCode}) ({await response.Content.ReadAsStringAsync()})", "");
+                if (!IsSuccessStatusCode(statusCode))
+                    return (false, $"Unhandled status code ({(int)statusCode}) ({await response.Content.ReadAsStringAsync()})", "");
 
                 if (!response.Headers.TryGetValues("Location", out IEnumerable<string>? values))
                     return (false, "Location header is missing", ""); // this should never happen, but handle anyways
