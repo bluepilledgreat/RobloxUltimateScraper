@@ -1,150 +1,175 @@
 ﻿using RobloxUltimateScraper.Enums;
 using RobloxUltimateScraper.Models;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace RobloxUltimateScraper
 {
     /// <summary>
-    /// The core
+    /// Asset ID scraper
     /// </summary>
-    internal static class Scraper
+    internal class Scraper
     {
         /// <summary>
-        /// Assets to download
+        /// Successful or failed download event.
         /// </summary>
-        public static Queue<AssetInput> Assets { get; }
+        public delegate void DownloadFinished(bool success);
+
+        private readonly object _lock = new object();
+
+        /// <summary>
+        /// Asset ID being downloaded
+        /// </summary>
+        public ulong AssetId { get; }
+
+        /// <summary>
+        /// Asset type of the asset
+        /// </summary>
+        public AssetType AssetType { get; private set; } = AssetType.Unknown;
+
+        /// <summary>
+        /// Total versions present in this asset
+        /// </summary>
+        public int TotalVersions { get; private set; }
+
+        /// <summary>
+        /// Most recent version being downloaded
+        /// </summary>
+        public int CurrentVersion { get; private set; }
+
+        /// <summary>
+        /// Directory where to output the files to
+        /// </summary>
+        public string OutputDirectory { get; set; }
+
+        /// <summary>
+        /// Directory to output index files to. This value is prioritised over <see cref="OutputDirectory"/>
+        /// </summary>
+        public string? IndexOutputDirectory { get; set; }
+
+        /// <summary>
+        /// Directory to output asset files to. This value is prioritised over <see cref="OutputDirectory"/>
+        /// </summary>
+        public string? FilesOutputDirectory { get; set; }
 
         /// <summary>
         /// File extension to be used for saving
         /// </summary>
-        public static string? FileExtension { get; set; } = null;
+        public string? FileExtension { get; set; } = null;
 
-        /// <summary>
-        /// Should the CDN url be trimmed in the console output
-        /// </summary>
-        public static bool ShouldTrimCdnUrlInConsole { get; set; } = true;
-
-        /// <summary>
-        /// Compression level
-        /// </summary>
-        public static int CompressionLevel { get; set; } = 0;
-
-        /// <summary>
-        /// Is index enabled
-        /// </summary>
-        public static bool IndexEnabled { get { return Config.Default.OutputType == OutputType.Index || Config.Default.OutputType == OutputType.Both; } }
-
-        /// <summary>
-        /// Are files enabled
-        /// </summary>
-        public static bool FilesEnabled { get { return Config.Default.OutputType == OutputType.Files || Config.Default.OutputType == OutputType.Both; } }
-
-        /// <summary>
-        /// Is console only
-        /// </summary>
-        public static bool ConsoleOnly { get { return Config.Default.OutputType == OutputType.Console; } }
-
+        private int _successfulDownloads;
         /// <summary>
         /// Versions that successfully downloaded
         /// </summary>
-        public static int SuccessfulDownloads { get; private set; }
+        public int SuccessfulDownloads => _successfulDownloads;
 
+        private int _failedDownloads;
         /// <summary>
         /// Versions that failed to download
         /// </summary>
-        public static int FailedDownloads { get; private set; }
-
-        /// <summary>
-        /// Successful or failed download event.
-        /// </summary>
-        public delegate void DownloadFinished();
+        public int FailedDownloads => _failedDownloads;
 
         /// <summary>
         /// Event that fires upon a successful or failed download.
         /// </summary>
-        public static event DownloadFinished? OnDownloadFinished;
+        public event DownloadFinished? OnDownloadFinished;
 
         /// <summary>
-        /// <see cref="HttpClient"/> singleton.
+        /// Should compress the files downloaded?
         /// </summary>
-        private static HttpClient _HttpClient { get; }
-
-        /// <summary>
-        /// Http client cookies.
-        /// </summary>
-        private static CookieContainer _CookieContainer { get; }
+        public bool ShouldCompress { get; set; } = true;
 
         /// <summary>
         /// Index entries
         /// </summary>
-        private static List<AssetOutput> _Index { get; }
+        private List<AssetOutput> _index = new List<AssetOutput>();
+
+        /// <summary>
+        /// Name of the output index files
+        /// </summary>
+        private string _indexName = "index";
 
         /// <summary>
         /// Initialises values used by <see cref="Scraper"/>
         /// </summary>
-        static Scraper()
+        public Scraper(ulong assetId, string outputDirectory)
         {
-            Assets = new Queue<AssetInput>();
+            AssetId = assetId;
+            OutputDirectory = outputDirectory;
+        }
 
-            SuccessfulDownloads = 0;
-            FailedDownloads = 0;
+        public struct SetupResult
+        {
+            public bool Success;
+            public string Message;
+        }
 
-            _CookieContainer = new CookieContainer();
-
-            string? cookie = null;
-
-            if (!string.IsNullOrEmpty(Config.Default.AuthCookie))
+        /// <summary>
+        /// Sets up the directory paths further for multiple download scrapers.
+        /// </summary>
+        /// <param name="childDirectoryName">Name of the child directory if needed</param>
+        /// <param name="type">Directory structure type</param>
+        public void SetupMultipleDownloadStructure(MultipleDownloadStructureType type, string childDirectoryName)
+        {
+            switch (type)
             {
-                Console.WriteLine("Using cookies from arguments.");
-                cookie = Config.Default.AuthCookie;
+                case MultipleDownloadStructureType.Default:
+                    OutputDirectory = Path.Combine(OutputDirectory, childDirectoryName);
+                    break;
+
+                case MultipleDownloadStructureType.Combined:
+                    _indexName = $"{AssetId}_index";
+                    break;
+
+                case MultipleDownloadStructureType.Separated:
+                    _indexName = $"{AssetId}_index";
+                    IndexOutputDirectory = Path.Combine(OutputDirectory, "Indexes");
+                    FilesOutputDirectory = Path.Combine(OutputDirectory, "Files");
+                    break;
             }
-            else
-            {
-                string? envValue = Environment.GetEnvironmentVariable("ROBLOXULTIMATESCRAPER_COOKIE");
-                if (!string.IsNullOrEmpty(envValue))
-                {
-                    Console.WriteLine("Using cookies from environment variables.");
-                    cookie = envValue;
-                }
-            }
-            
-            if (cookie != null)
-                _CookieContainer.Add(new Cookie(".ROBLOSECURITY", cookie, "/", $".{Config.Default.BaseUrl}"));
+        }
 
-            HttpClientHandler httpClientHandler = new HttpClientHandler
-            {
-                AutomaticDecompression = DecompressionMethods.All,
-                AllowAutoRedirect = false, // we are using v1 because v2 is bad
-                CookieContainer = _CookieContainer,
-                UseCookies = true
-            };
+        public async Task<SetupResult> Setup(HttpClient httpClient)
+        {
+            var assetDeliveryInfo = await GetAssetDeliveryInformation(httpClient);
+            if (!assetDeliveryInfo.Success)
+                return new SetupResult { Success = false, Message = $"Failed to fetch versions for asset {AssetId}: {assetDeliveryInfo.Error}" };
 
-            _HttpClient = new HttpClient(httpClientHandler)
-            {
-                Timeout = TimeSpan.FromSeconds(Config.Default.HttpTimeout)
-            };
-            //_HttpClient.DefaultRequestHeaders.Add("User-Agent", "Roblox/WinINet");
+            AssetType = assetDeliveryInfo.AssetType;
+            TotalVersions = assetDeliveryInfo.TotalVersions;
 
-            _Index = new List<AssetOutput>();
+            FileExtension = Config.Default.OutputExtension == "Auto" ? assetDeliveryInfo.AssetType.GetExtension() : Config.Default.OutputExtension;
+
+            return new SetupResult { Success = true };
+        }
+
+        /// <summary>
+        /// Creates all the necessary output directories
+        /// </summary>
+        public void CreateOutputDirectories()
+        {
+            // create all the directories we need
+            Directory.CreateDirectory(OutputDirectory);
+
+            if (!string.IsNullOrEmpty(IndexOutputDirectory))
+                Directory.CreateDirectory(IndexOutputDirectory);
+
+            if (!string.IsNullOrEmpty(FilesOutputDirectory))
+                Directory.CreateDirectory(FilesOutputDirectory);
         }
 
         /// <summary>
         /// Creates a request to https://assetdelivery.roblox.com/v1/asset/
         /// </summary>
-        /// <param name="id">Asset Id</param>
+        /// <param name="httpClient">Http client</param>
         /// <param name="version">Asset Version (0 for latest)</param>
         /// <returns>Http response</returns>
-        public static Task<HttpResponseMessage> AssetRequest(long id, int version = 0)
+        public Task<HttpResponseMessage> AssetRequest(HttpClient httpClient, int version = 0)
         {
-            string url = $"https://assetdelivery.{Config.Default.BaseUrl}/v1/asset/?id={id}&version={version}";
-            return _HttpClient.GetAsync(url);
+            string url = $"https://assetdelivery.{Config.Default.BaseUrl}/v1/asset/?id={AssetId}&version={version}";
+            return httpClient.GetAsync(url);
         }
 
         /// <summary>
@@ -168,6 +193,29 @@ namespace RobloxUltimateScraper
             }
         }
 
+        /// <summary>
+        /// Gets the status code from an assetdelivery response.
+        /// This function will use the <see cref="HttpResponseMessage.StatusCode"/> field and the <see cref="HttpResponseMessage.Content"/> to deduce the correct status code.
+        /// </summary>
+        /// <param name="responseMessage">Response message from assetdelivery</param>
+        /// <returns>Status code</returns>
+        private static HttpStatusCode GetAssetDeliveryStatusCode(HttpResponseMessage responseMessage)
+        {
+            switch (responseMessage.StatusCode)
+            {
+                case HttpStatusCode.Forbidden:
+                    // roblox updated assetdelivery to return 403 for copylocked assets
+                    // originally, it returned a 409
+                    // this breaks a bunch of existing logic, so we have to check the body aswell
+                    string responseContent = responseMessage.Content.ReadAsStringAsync().Result;
+                    bool isConflict = responseContent.Contains("User is not authorized to access Asset."); // this should suffice for now
+                    return isConflict ? HttpStatusCode.Conflict : HttpStatusCode.Forbidden;
+
+                default:
+                    return responseMessage.StatusCode;
+            }
+        }
+
         public struct AssetDeliveryInformation
         {
             public bool Success;
@@ -180,21 +228,21 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Retrieves information from asset delivery
         /// </summary>
-        /// <param name="id">Asset Id</param>
         /// <returns>Asset delivery information</returns>
-        public static async Task<AssetDeliveryInformation> GetAssetDeliveryInformation(long id)
+        public async Task<AssetDeliveryInformation> GetAssetDeliveryInformation(HttpClient httpClient)
         {
-            HttpResponseMessage response = await AssetRequest(id);
+            HttpResponseMessage response = await AssetRequest(httpClient);
+            HttpStatusCode statusCode = GetAssetDeliveryStatusCode(response);
 
-            if (response.StatusCode == HttpStatusCode.Conflict)
+            if (statusCode == HttpStatusCode.Conflict)
                 return new AssetDeliveryInformation { Success = false, Error = "Insufficient permissions to download asset" };
 
-            if (!IsSuccessStatusCode(response.StatusCode, allowForbidden: true)) // 403 means that the latest version is deleted but can still download
-                return new AssetDeliveryInformation { Success = false, Error = $"Unhandled status code ({(int)response.StatusCode})" };
+            if (!IsSuccessStatusCode(statusCode, allowForbidden: true)) // 403 means that the latest version is deleted but can still download
+                return new AssetDeliveryInformation { Success = false, Error = $"Unhandled status code ({(int)statusCode})" };
 
             IEnumerable<string>? values;
-            int versions = 0;
-            AssetType assetType = 0;
+            int versions;
+            AssetType assetType;
 
             {
                 if (!response.Headers.TryGetValues("roblox-assetversionnumber", out values))
@@ -215,7 +263,7 @@ namespace RobloxUltimateScraper
                 if (!Enum.TryParse(versionsStr, out assetType))
                 {
                     Debug.Assert(false);
-                    assetType = AssetType.Product;
+                    assetType = AssetType.Unknown;
                 }
             }
 
@@ -225,36 +273,86 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Retrieves the CDN url from an asset id
         /// </summary>
-        /// <param name="id">Asset Id</param>
+        /// <param name="httpClient">Http client</param>
         /// <param name="version">Version (0 for latest)</param>
         /// <returns>Success, Error string, CDN url</returns>
-        public static async Task<(bool, string, string)> GetCDNUrl(long id, int version = 0)
+        public async Task<(bool, string, string)> GetCdnUrl(HttpClient httpClient, int version = 0)
         {
-            HttpResponseMessage response = await AssetRequest(id, version);
+            try
+            {
+                HttpResponseMessage response = await AssetRequest(httpClient, version);
+                HttpStatusCode statusCode = GetAssetDeliveryStatusCode(response);
 
-            if (response.StatusCode == HttpStatusCode.Conflict)
-                return (false, "Insufficient permissions to download asset", "");
+                switch (statusCode)
+                {
+                    case HttpStatusCode.Conflict:
+                        return (false, "Insufficient permissions to download asset", "");
 
-            if (!IsSuccessStatusCode(response.StatusCode, allowForbidden: true)) // 403 means that the latest version is deleted but can still download
-                return (false, $"Unhandled status code ({(int)response.StatusCode}) ({await response.Content.ReadAsStringAsync()})", "");
+                    case HttpStatusCode.Forbidden:
+                        return (false, "Asset version has been deleted", "");
 
-            if (!response.Headers.TryGetValues("Location", out IEnumerable<string>? values))
-                return (false, "Location header is missing", ""); // this should never happen, but handle anyways
+                    case HttpStatusCode.TooManyRequests:
+                        return (false, "Too many requests", "");
+                }
 
-            string location = values.First();
+                if (!IsSuccessStatusCode(statusCode))
+                    return (false, $"Unhandled status code ({(int)statusCode}) ({await response.Content.ReadAsStringAsync()})", "");
 
-            return (true, "Success", location);
+                if (!response.Headers.TryGetValues("Location", out IEnumerable<string>? values))
+                    return (false, "Location header is missing", ""); // this should never happen, but handle anyways
+
+                string location = values.First();
+
+                return (true, "Success", location);
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.ToString(), "");
+            }
+        }
+
+        /// <summary>
+        /// Gets content from the CDN using a specified URL
+        /// </summary>
+        /// <param name="httpClient">Http client</param>
+        /// <param name="url">CDN Url</param>
+        /// <returns>Success, Error Message, HttpResponseMessage</returns>
+        public static async Task<(bool, string, HttpResponseMessage?)> GetCdnContent(HttpClient httpClient, string url)
+        {
+            try
+            {
+                HttpResponseMessage response = await httpClient.GetAsync(url);
+
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.Forbidden:
+                        return (false, "Asset not found on CDN", null);
+
+                    case HttpStatusCode.TooManyRequests:
+                        return (false, "Too many requests", null);
+
+                    default:
+                        if (!IsSuccessStatusCode(response.StatusCode))
+                            return (false, $"Unknown status code ({(int)response.StatusCode})", null);
+                        break;
+                }
+
+                return (true, "Success", response);
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.ToString(), null);
+            }
         }
 
         /// <summary>
         /// Constructs the asset output path
         /// </summary>
-        /// <param name="id">Id</param>
         /// <param name="version">Version</param>
         /// <returns>Asset output path</returns>
-        public static string BuildAssetOutputFileName(long id, int version)
+        public string BuildAssetOutputFileName(int version)
         {
-            string fileName = id.ToString();
+            string fileName = AssetId.ToString();
             if (version != 0)
                 fileName += $"-v{version}";
 
@@ -264,13 +362,12 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Logs an asset to index
         /// </summary>
-        /// <param name="id">Id</param>
         /// <param name="version">Version</param>
         /// <param name="cdnUrl">CDN url</param>
         /// <param name="fileSizeInMb">File size in Mb</param>
         /// <param name="lastModified">Last modified</param>
         /// <param name="error">Error message</param>
-        private static void LogAsset(long id,
+        private void LogAsset(
             int version,
             string? cdnUrl = null,
             double? fileSizeInMb = null,
@@ -279,7 +376,6 @@ namespace RobloxUltimateScraper
         {
             AssetOutput output = new AssetOutput
             {
-                Id = id,
                 Version = version,
                 CDNUrl = cdnUrl,
                 FileSizeInMb = fileSizeInMb,
@@ -287,49 +383,48 @@ namespace RobloxUltimateScraper
                 Error = error
             };
 
-            Console.WriteLine(output.ToString(trimCdnUrl: ShouldTrimCdnUrlInConsole));
+            Console.WriteLine(output.ToString(trimCdnUrl: Config.Default.TrimCdnUrl.ShouldTrim(OutputType.Console)));
 
-            _Index.Add(output);
+            _index.Add(output);
         }
 
         /// <summary>
         /// Logs an asset to index and saves it
         /// </summary>
         /// <param name="response">Http response messsage</param>
-        /// <param name="id">Id</param>
         /// <param name="version">Version</param>
         /// <param name="cdnUrl">CDN url</param>
-        private static async Task LogAssetFromCDNHttpMessageResponse(HttpResponseMessage response,
-            long id,
+        private async Task LogAssetFromCdnHttpMessageResponse(HttpResponseMessage response,
             int version,
             string cdnUrl)
         {
-            if (!ConsoleOnly)
-                Directory.CreateDirectory(Config.Default.OutputDirectory);
+            string outputDir = FilesOutputDirectory ?? OutputDirectory;
 
             // get last modified
-            string? lastModified = response.Content.Headers.GetValues("last-modified").FirstOrDefault();
+            string? lastModified = null;
+            if (response.Content.Headers.TryGetValues("last-modified", out IEnumerable<string>? lastModifiedValues))
+                lastModified = lastModifiedValues.First();
 
             double? fileSize = null;
 
             using (Stream stream = await response.Content.ReadAsStreamAsync())
             {
-                fileSize = Math.Round(stream.Length / 1024f / 1024f, 6);
+                fileSize = Math.Round(stream.Length / 1024.0 / 1024.0, 6);
 
-                if (FilesEnabled)
+                if (Config.Default.OutputType.IsFileSavingEnabled())
                 {
-                    string outputName = BuildAssetOutputFileName(id, version);
-                    string path = Path.Combine(Config.Default.OutputDirectory, outputName);
+                    string outputName = BuildAssetOutputFileName(version);
+                    string path = Path.Combine(outputDir, outputName);
                     string outputPath = FileWriter.BuildOutputFileName(path, FileExtension);
 
                     DateTime? lastModifiedDT = lastModified != null ? DateTime.Parse(lastModified) : null;
 
-                    FileWriter.Save(outputPath, stream, CompressionLevel, lastModifiedDT);
+                    CompressionType compressionType = ShouldCompress ? Config.Default.CompressionType : CompressionType.None;
+                    FileWriter.Save(outputPath, stream, compressionType, Config.Default.CompressionLevel, lastModifiedDT);
                 }
             }
 
             LogAsset(
-                id: id,
                 version: version,
                 cdnUrl: cdnUrl,
                 fileSizeInMb: fileSize,
@@ -340,19 +435,19 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Increments <see cref="SuccessfulDownloads"/> and invokes <see cref="OnDownloadFinished"/>.
         /// </summary>
-        private static void FireAssetSuccess()
+        private void FireAssetSuccess()
         {
-            SuccessfulDownloads++;
-            OnDownloadFinished?.Invoke();
+            Interlocked.Increment(ref _successfulDownloads);
+            OnDownloadFinished?.Invoke(true);
         }
 
         /// <summary>
         /// Increments <see cref="FailedDownloads"/> and invokes <see cref="OnDownloadFinished"/>.
         /// </summary>
-        private static void FireAssetFailed()
+        private void FireAssetFailed()
         {
-            SuccessfulDownloads++;
-            OnDownloadFinished?.Invoke();
+            Interlocked.Increment(ref _failedDownloads);
+            OnDownloadFinished?.Invoke(false);
         }
 
         /// <summary>
@@ -360,74 +455,87 @@ namespace RobloxUltimateScraper
         /// </summary>
         /// <returns>Worker</returns>
         // TODO: add try catch blocks. give 3 retries w/ exceptions
-        public static async Task StartWorker()
+        public async Task StartWorker(HttpClient httpClient)
         {
-            while (Assets.Count > 0)
+            while (TotalVersions > CurrentVersion)
             {
-                AssetInput asset;
-                lock (Assets)
+                int version;
+                lock (_lock)
                 {
-                    if (Assets.Count == 0)
+                    if (TotalVersions <= CurrentVersion)
                         continue;
-                    asset = Assets.Dequeue();
+                    CurrentVersion++;
+                    version = CurrentVersion;
                 }
 
                 // get the url
-                (bool cdnGetSuccess, string cdnGetMessage, string cdnUrl) = await GetCDNUrl(asset.Id, asset.Version);
+                (bool cdnGetSuccess, string cdnGetMessage, string cdnUrl) = await GetCdnUrl(httpClient, version);
 
                 if (!cdnGetSuccess)
                 {
-                    LogAsset(error: $"Failed to fetch {asset.Id} v{asset.Version}: {cdnGetMessage}", id: asset.Id, version: asset.Version);
+                    LogAsset(error: $"Failed to fetch {AssetId} v{version}: {cdnGetMessage}", version: version);
                     FireAssetFailed();
                     continue;
                 }
 
                 // download the asset
-                HttpResponseMessage cdnResponse = await _HttpClient.GetAsync(cdnUrl);
+                (bool cdnDownloadSuccess, string cdnDownloadMessage, HttpResponseMessage? cdnDownloadResponse) = await GetCdnContent(httpClient, cdnUrl);
 
-                if (cdnResponse.StatusCode == HttpStatusCode.Forbidden)
+                if (!cdnDownloadSuccess)
                 {
-                    LogAsset(error: $"Failed to fetch {asset.Id} v{asset.Version} ({cdnUrl}): Asset not found on CDN", id: asset.Id, version: asset.Version);
+                    LogAsset(error: $"Failed to fetch {AssetId} v{version} ({cdnUrl}): {cdnDownloadMessage}", version: version);
                     FireAssetFailed();
                     continue;
                 }
 
-                if (!IsSuccessStatusCode(cdnResponse.StatusCode))
-                {
-                    LogAsset(error: $"Failed to fetch {asset.Id} v{asset.Version} ({cdnUrl}): Unknown status code ({(int)cdnResponse.StatusCode})", id: asset.Id, version: asset.Version);
-                    FireAssetFailed();
-                    continue;
-                }
+                Debug.Assert(cdnDownloadResponse != null);
 
                 // save!
-                await LogAssetFromCDNHttpMessageResponse(cdnResponse, asset.Id, asset.Version, cdnUrl);
+                await LogAssetFromCdnHttpMessageResponse(cdnDownloadResponse, version, cdnUrl);
                 FireAssetSuccess();
+            }
+        }
+
+        public async Task StartWorker()
+        {
+            HttpClient httpClient = Config.Default.SingleHttpClient ? Http.Client : Http.CreateClient();
+
+            try
+            {
+                await StartWorker(httpClient);
+            }
+            finally
+            {
+                // only dispose if it isnt the global http client
+                if (httpClient != Http.Client)
+                    httpClient.Dispose();
             }
         }
 
         /// <summary>
         /// Prints download statistics
         /// </summary>
-        public static void PrintDownloadStatistics()
+        public void PrintDownloadStatistics()
         {
-            Console.WriteLine($"Successful Downloads: {SuccessfulDownloads}");
-            Console.WriteLine($"Failed Downloads: {FailedDownloads}");
-            Console.WriteLine($"Total Downloads: {SuccessfulDownloads + FailedDownloads}");
+            Console.WriteLine($"{AssetId} | Successful Downloads: {SuccessfulDownloads}");
+            Console.WriteLine($"{AssetId} | Failed Downloads: {FailedDownloads}");
+            Console.WriteLine($"{AssetId} | Total Downloads: {SuccessfulDownloads + FailedDownloads}");
         }
 
         /// <summary>
         /// Writes the index file
         /// </summary>
-        /// <param name="header">Index header</param>
-        public static void WriteIndexFile(string header)
+        public void WriteIndexFile()
         {
-            if (!IndexEnabled)
+            if (!Config.Default.OutputType.IsIndexEnabled())
                 return;
 
-            Directory.CreateDirectory(Config.Default.OutputDirectory);
+            string outputDir = IndexOutputDirectory ?? OutputDirectory;
+
+            Directory.CreateDirectory(outputDir);
 
             // sort index values
-            _Index.Sort();
+            _index.Sort();
 
             List<string> indexPaths = new List<string>();
 
@@ -436,14 +544,14 @@ namespace RobloxUltimateScraper
                 // create index file contents
                 StringBuilder builder = new StringBuilder();
 
-                builder.AppendLine(header);
+                builder.AppendLine($"{AssetId} asset versions on {DateTime.Now.ToString("R")} ({TotalVersions} versions)");
 
-                foreach (AssetOutput asset in _Index)
-                    builder.AppendLine(asset.ToString());
+                foreach (AssetOutput asset in _index)
+                    builder.AppendLine(asset.ToString(trimCdnUrl: Config.Default.TrimCdnUrl.ShouldTrim(OutputType.Index)));
 
                 string contents = builder.ToString();
 
-                string path = Path.Combine(Config.Default.OutputDirectory, "index.txt");
+                string path = Path.Combine(outputDir, $"{_indexName}.txt");
                 indexPaths.Add(path);
 
                 File.WriteAllText(path, contents);
@@ -451,9 +559,9 @@ namespace RobloxUltimateScraper
 
             if (Config.Default.IndexType == IndexType.Json || Config.Default.IndexType == IndexType.All)
             {
-                string contents = JsonSerializer.Serialize(_Index);
+                string contents = JsonSerializer.Serialize(_index);
 
-                string path = Path.Combine(Config.Default.OutputDirectory, "index.json");
+                string path = Path.Combine(outputDir, $"{_indexName}.json");
                 indexPaths.Add(path);
 
                 File.WriteAllText(path, contents);
@@ -462,5 +570,12 @@ namespace RobloxUltimateScraper
             // write information about index
             Console.WriteLine($"Index file(s) can be found at {string.Join(", ", indexPaths)}");
         }
+
+        /// <summary>
+        /// Gets the path of the index file
+        /// </summary>
+        /// <param name="json">Get the path of the JSON variation of the index</param>
+        /// <returns>Index file path</returns>
+        public string GetIndexFilePath(bool json = false) => Path.Combine(IndexOutputDirectory ?? OutputDirectory, $"{_indexName}.{(json ? "json" : "txt")}");
     }
 }

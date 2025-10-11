@@ -1,11 +1,8 @@
 ﻿namespace RobloxUltimateScraper.Enums
 {
-    /// <summary>
-    /// Automatically generated, do not modify.
-    /// </summary>
     internal enum AssetType
     {
-        Product = 0,
+        Unknown = 0,
         Image = 1,
         TShirt = 2,
         Audio = 3,
@@ -81,14 +78,18 @@
         CodeSnippet = 80,
         AdsVideo = 81,
         OtaUpdate = 82,
-        Screenshot = 83
+        Screenshot = 83,
+        RuntimePropertySet = 84,
+        StorePreviewVideo = 85,
+        GamePreviewVideo = 86,
+        CreatorExperienceConfig = 87
     }
 
     internal static class AssetTypeEx
     {
         private static readonly Dictionary<AssetType, string?> _extensionMap = new Dictionary<AssetType, string?>()
         {
-            [AssetType.Product] = null,
+            [AssetType.Unknown] = null,
             [AssetType.Image] = "png", // TODO: auto detect what type of image it is
             [AssetType.TShirt] = "rbxm",
             [AssetType.Audio] = "ogg",
@@ -119,7 +120,7 @@
             [AssetType.Package] = "txt",
             [AssetType.YouTubeVideo] = null,
             [AssetType.GamePass] = null,
-            [AssetType.App] = "rbxm",
+            [AssetType.App] = "rbxl",
             [AssetType.Code] = null,
             [AssetType.Plugin] = "rbxm",
             [AssetType.SolidModel] = "rbxm",
@@ -140,11 +141,11 @@
             [AssetType.SwimAnimation] = "rbxm",
             [AssetType.WalkAnimation] = "rbxm",
             [AssetType.PoseAnimation] = "rbxm",
-            [AssetType.LocalizationTableManifest] = null,
-            [AssetType.LocalizationTableTranslation] = null,
+            [AssetType.LocalizationTableManifest] = "json",
+            [AssetType.LocalizationTableTranslation] = "json",
             [AssetType.EmoteAnimation] = "rbxm",
             [AssetType.Video] = null,
-            [AssetType.TexturePack] = null,
+            [AssetType.TexturePack] = "xml",
             [AssetType.TShirtAccessory] = "rbxm",
             [AssetType.ShirtAccessory] = "rbxm",
             [AssetType.PantsAccessory] = "rbxm",
@@ -154,17 +155,21 @@
             [AssetType.LeftShoeAccessory] = "rbxm",
             [AssetType.RightShoeAccessory] = "rbxm",
             [AssetType.DressSkirtAccessory] = "rbxm",
-            [AssetType.FontFamily] = null,
-            [AssetType.FontFace] = null,
-            [AssetType.MeshHiddenSurfaceRemoval] = null,
+            [AssetType.FontFamily] = "json",
+            [AssetType.FontFace] = "ttf",
+            [AssetType.MeshHiddenSurfaceRemoval] = "rbxm",
             [AssetType.EyebrowAccessory] = "rbxm",
             [AssetType.EyelashAccessory] = "rbxm",
             [AssetType.MoodAnimation] = "rbxm",
             [AssetType.DynamicHead] = "rbxm",
             [AssetType.CodeSnippet] = null,
             [AssetType.AdsVideo] = null,
-            [AssetType.OtaUpdate] = null,
-            [AssetType.Screenshot] = null
+            [AssetType.OtaUpdate] = "rbxm",
+            [AssetType.Screenshot] = null,
+            [AssetType.RuntimePropertySet] = null,
+            [AssetType.StorePreviewVideo] = null,
+            [AssetType.GamePreviewVideo] = null,
+            [AssetType.CreatorExperienceConfig] = null
         };
 
         public static string? GetExtension(this AssetType type)

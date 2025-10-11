@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
+﻿using RobloxUltimateScraper.Enums;
 
 namespace RobloxUltimateScraper
 {
@@ -28,11 +23,11 @@ namespace RobloxUltimateScraper
         /// <param name="filePath">File path</param>
         /// <param name="stream">Stream</param>
         /// <param name="lastModified">Last modified</param>
-        public static void Save(string filePath, Stream stream, int compressionLevel, DateTime? lastModified = null)
+        public static void Save(string filePath, Stream stream, CompressionType compressionType, int compressionLevel, DateTime? lastModified = null)
         {
             using (MemoryStream ms = new MemoryStream())
             {
-                switch (Config.Default.CompressionType)
+                switch (compressionType)
                 {
                     case CompressionType.GZip:
                         ICSharpCode.SharpZipLib.GZip.GZip.Compress(stream, ms, false);
