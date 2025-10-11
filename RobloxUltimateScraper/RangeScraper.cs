@@ -49,15 +49,16 @@ namespace RobloxUltimateScraper
                     id = CurrentId;
                 }
 
-                string outputDirectory = Path.Combine(OutputDirectory, $"Asset_{id}");
-                if (Directory.Exists(outputDirectory) && File.Exists(Path.Combine(outputDirectory, "index.txt"))) // index.txt is an indication that the download was finished. does not work for non-index runs.
+                Scraper scraper = new Scraper(id, OutputDirectory);
+                scraper.SetupMultipleDownloadStructure(Config.Default.MultipleDownloadStructure, $"Asset_{id}");
+
+                if (File.Exists(scraper.GetIndexFilePath())) // index.txt is an indication that the download was finished. does not work for non-index runs.
                 {
-                    Console.WriteLine($"Skipping {id} - already done. Delete the directory to redo the download.");
+                    Console.WriteLine($"Skipping {id} - already done. Delete the file/directory to redo the download.");
                     OnAssetFinished?.Invoke();
                     continue;
                 }
 
-                Scraper scraper = new Scraper(id, outputDirectory);
                 var result = await scraper.Setup(httpClient);
                 if (!result.Success)
                 {

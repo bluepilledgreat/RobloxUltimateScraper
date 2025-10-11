@@ -17,7 +17,7 @@ namespace RobloxUltimateScraper
         /// </summary>
         public delegate void DownloadFinished(bool success);
 
-        private object _lock = new object();
+        private readonly object _lock = new object();
 
         /// <summary>
         /// Asset ID being downloaded
@@ -42,7 +42,17 @@ namespace RobloxUltimateScraper
         /// <summary>
         /// Directory where to output the files to
         /// </summary>
-        public string OutputDirectory { get; }
+        public string OutputDirectory { get; set; }
+
+        /// <summary>
+        /// Directory to output index files to. This value is prioritised over <see cref="OutputDirectory"/>
+        /// </summary>
+        public string? IndexOutputDirectory { get; set; }
+
+        /// <summary>
+        /// Directory to output asset files to. This value is prioritised over <see cref="OutputDirectory"/>
+        /// </summary>
+        public string? FilesOutputDirectory { get; set; }
 
         /// <summary>
         /// File extension to be used for saving
@@ -77,6 +87,11 @@ namespace RobloxUltimateScraper
         private List<AssetOutput> _index = new List<AssetOutput>();
 
         /// <summary>
+        /// Name of the output index files
+        /// </summary>
+        private string _indexName = "index";
+
+        /// <summary>
         /// Initialises values used by <see cref="Scraper"/>
         /// </summary>
         public Scraper(ulong assetId, string outputDirectory)
@@ -91,6 +106,31 @@ namespace RobloxUltimateScraper
             public string Message;
         }
 
+        /// <summary>
+        /// Sets up the directory paths further for multiple download scrapers.
+        /// </summary>
+        /// <param name="childDirectoryName">Name of the child directory if needed</param>
+        /// <param name="type">Directory structure type</param>
+        public void SetupMultipleDownloadStructure(MultipleDownloadStructureType type, string childDirectoryName)
+        {
+            switch (type)
+            {
+                case MultipleDownloadStructureType.Default:
+                    OutputDirectory = Path.Combine(OutputDirectory, childDirectoryName);
+                    break;
+
+                case MultipleDownloadStructureType.Combined:
+                    _indexName = $"{AssetId}_index";
+                    break;
+
+                case MultipleDownloadStructureType.Separated:
+                    _indexName = $"{AssetId}_index";
+                    IndexOutputDirectory = Path.Combine(OutputDirectory, "Indexes");
+                    FilesOutputDirectory = Path.Combine(OutputDirectory, "Files");
+                    break;
+            }
+        }
+
         public async Task<SetupResult> Setup(HttpClient httpClient)
         {
             var assetDeliveryInfo = await GetAssetDeliveryInformation(httpClient);
@@ -101,7 +141,15 @@ namespace RobloxUltimateScraper
             TotalVersions = assetDeliveryInfo.TotalVersions;
 
             FileExtension = Config.Default.OutputExtension == "Auto" ? assetDeliveryInfo.AssetType.GetExtension() : Config.Default.OutputExtension;
+
+            // create all the directories we need
             Directory.CreateDirectory(OutputDirectory);
+
+            if (!string.IsNullOrEmpty(IndexOutputDirectory))
+                Directory.CreateDirectory(IndexOutputDirectory);
+
+            if (!string.IsNullOrEmpty(FilesOutputDirectory))
+                Directory.CreateDirectory(FilesOutputDirectory);
 
             return new SetupResult { Success = true };
         }
@@ -319,6 +367,8 @@ namespace RobloxUltimateScraper
             int version,
             string cdnUrl)
         {
+            string outputDir = FilesOutputDirectory ?? OutputDirectory;
+
             // get last modified
             string? lastModified = null;
             if (response.Content.Headers.TryGetValues("last-modified", out IEnumerable<string>? lastModifiedValues))
@@ -333,7 +383,7 @@ namespace RobloxUltimateScraper
                 if (Config.Default.OutputType.IsFileSavingEnabled())
                 {
                     string outputName = BuildAssetOutputFileName(version);
-                    string path = Path.Combine(OutputDirectory, outputName);
+                    string path = Path.Combine(outputDir, outputName);
                     string outputPath = FileWriter.BuildOutputFileName(path, FileExtension);
 
                     DateTime? lastModifiedDT = lastModified != null ? DateTime.Parse(lastModified) : null;
@@ -449,7 +499,9 @@ namespace RobloxUltimateScraper
             if (!Config.Default.OutputType.IsIndexEnabled())
                 return;
 
-            Directory.CreateDirectory(OutputDirectory);
+            string outputDir = IndexOutputDirectory ?? OutputDirectory;
+
+            Directory.CreateDirectory(outputDir);
 
             // sort index values
             _index.Sort();
@@ -468,7 +520,7 @@ namespace RobloxUltimateScraper
 
                 string contents = builder.ToString();
 
-                string path = Path.Combine(OutputDirectory, "index.txt");
+                string path = Path.Combine(outputDir, $"{_indexName}.txt");
                 indexPaths.Add(path);
 
                 File.WriteAllText(path, contents);
@@ -478,7 +530,7 @@ namespace RobloxUltimateScraper
             {
                 string contents = JsonSerializer.Serialize(_index);
 
-                string path = Path.Combine(OutputDirectory, "index.json");
+                string path = Path.Combine(outputDir, $"{_indexName}.json");
                 indexPaths.Add(path);
 
                 File.WriteAllText(path, contents);
@@ -487,5 +539,12 @@ namespace RobloxUltimateScraper
             // write information about index
             Console.WriteLine($"Index file(s) can be found at {string.Join(", ", indexPaths)}");
         }
+
+        /// <summary>
+        /// Gets the path of the index file
+        /// </summary>
+        /// <param name="json">Get the path of the JSON variation of the index</param>
+        /// <returns>Index file path</returns>
+        public string GetIndexFilePath(bool json = false) => Path.Combine(IndexOutputDirectory ?? OutputDirectory, $"{_indexName}.{(json ? "json" : "txt")}");
     }
 }

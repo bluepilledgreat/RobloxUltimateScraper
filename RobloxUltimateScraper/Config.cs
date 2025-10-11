@@ -6,7 +6,7 @@ namespace RobloxUltimateScraper
     {
         public static Config Default { get; private set; } = null!;
 
-        private CommandLineConfig _clConfig;
+        private readonly CommandLineConfig _clConfig;
 
         public ulong ScraperAssetId => _clConfig.ScraperAssetId;
 
@@ -48,12 +48,16 @@ namespace RobloxUltimateScraper
         /// <inheritdoc cref="CommandLineConfig.CompressImages"/>
         public bool CompressImages => _clConfig.CompressImages;
 
+        /// <inheritdoc cref="CommandLineConfig.MultipleDownloadStructure"/>
+        public MultipleDownloadStructureType MultipleDownloadStructure { get; }
+
         public Config(CommandLineConfig config)
         {
             _clConfig = config;
 
             CompressionLevel = _clConfig.CompressionLevelArgOtherName != null ? (int)_clConfig.CompressionLevelArgOtherName : _clConfig.CompressionLevelArg;
             SingleHttpClient = _clConfig.SingleHttpClientOtherName ?? _clConfig.SingleHttpClient;
+            MultipleDownloadStructure = _clConfig.MultipleDownloadStructureOtherName ?? _clConfig.MultipleDownloadStructure;
         }
 
         public static void Initialise(CommandLineConfig commandLineConfig)
