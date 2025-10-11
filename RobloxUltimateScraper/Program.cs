@@ -194,6 +194,8 @@ namespace RobloxUltimateScraper
                 return;
             }
 
+            scraper.CreateOutputDirectories();
+
             Console.WriteLine($"Asset {assetId} has {scraper.TotalVersions} versions!");
 
             // set up titles

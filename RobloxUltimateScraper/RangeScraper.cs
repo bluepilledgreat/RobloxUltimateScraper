@@ -74,6 +74,7 @@ namespace RobloxUltimateScraper
                     continue;
                 }
 
+                scraper.CreateOutputDirectories();
                 OnAssetVersionsDiscovered?.Invoke(scraper.TotalVersions);
 
                 scraper.OnDownloadFinished += (bool success) => OnAssetDownloadFinished?.Invoke(success);

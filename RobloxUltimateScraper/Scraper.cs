@@ -142,6 +142,14 @@ namespace RobloxUltimateScraper
 
             FileExtension = Config.Default.OutputExtension == "Auto" ? assetDeliveryInfo.AssetType.GetExtension() : Config.Default.OutputExtension;
 
+            return new SetupResult { Success = true };
+        }
+
+        /// <summary>
+        /// Creates all the necessary output directories
+        /// </summary>
+        public void CreateOutputDirectories()
+        {
             // create all the directories we need
             Directory.CreateDirectory(OutputDirectory);
 
@@ -150,8 +158,6 @@ namespace RobloxUltimateScraper
 
             if (!string.IsNullOrEmpty(FilesOutputDirectory))
                 Directory.CreateDirectory(FilesOutputDirectory);
-
-            return new SetupResult { Success = true };
         }
 
         /// <summary>
